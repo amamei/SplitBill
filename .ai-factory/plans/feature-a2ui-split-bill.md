@@ -331,3 +331,8 @@ Action contract (server dispatch table; the system prompt publishes exactly this
 - The system prompt embeds the catalog schema (large). Prompt caching via `cache_control` on the system block and a deterministic prompt keep input cost flat; measure once and trim examples if needed.
 - `claude-opus-5-5` rejects forced `tool_choice` and `thinking: disabled`; the runner uses `auto` + prompt steering and adaptive thinking with `effort` from env. If the team settles on another model, only `ANTHROPIC_MODEL`/`ANTHROPIC_EFFORT` change.
 - Money units interpretation (major-unit I/O, minor storage) is recorded in Requirements Reconciliation; flag it to the other participants before the demo so all four demos agree.
+
+<!-- aif-verify 2026-10-04: status warn, accepted as-is.
+Accepted: live-model checks not run (Task 9 countTokens, Task 11 curl round trip, Task 14 smoke/bench; need `ant auth login`);
+scope additions errors.general + debug-only /api/debug/seed (A2UI_DEBUG=1); primary Button variant not styleable in @a2ui/react 0.12.0;
+no ARCHITECTURE/RULES/ROADMAP artifacts (context-gate WARNs). -->
