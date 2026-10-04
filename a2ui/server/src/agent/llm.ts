@@ -58,8 +58,10 @@ function describeOllamaError(err: unknown, llm: Extract<LlmConfig, { provider: "
   if (err instanceof Anthropic.APIConnectionError) {
     return `Ollama недоступна по ${llm.baseURL}. Запустите \`ollama serve\` (или приложение Ollama) и повторите.`;
   }
-  if (err instanceof Anthropic.NotFoundError && /not found/i.test(err.message)) {
-    return `Модель ${llm.model} не найдена в Ollama. Выполните \`ollama pull ${llm.model}\`.`;
+  if (err instanceof Anthropic.NotFoundError) {
+    if (/model\b.*not found/i.test(err.message)) return `Модель ${llm.model} не найдена в Ollama. Выполните \`ollama pull ${llm.model}\`.`;
+    // A bare "404 page not found": the server has no /v1/messages (Ollama before the Anthropic-compatible API).
+    return `Ollama по ${llm.baseURL} не отдаёт /v1/messages (404). Обновите Ollama до версии с Anthropic-совместимым API или проверьте OLLAMA_BASE_URL.`;
   }
   if (err instanceof Anthropic.BadRequestError) {
     if (/does not support tools/i.test(err.message)) return `Модель ${llm.model} не поддерживает инструменты — выберите другую модель.`;

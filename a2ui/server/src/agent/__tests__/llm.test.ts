@@ -39,6 +39,13 @@ describe("describeLlmError", () => {
     assert.match(describeLlmError(notFound, ollama), /ollama pull x/);
   });
 
+  it("tells an outdated Ollama (no /v1/messages) apart from a missing model", () => {
+    const noRoute = Anthropic.APIError.generate(404, undefined, "404 page not found", new Headers());
+    const text = describeLlmError(noRoute, ollama);
+    assert.doesNotMatch(text, /ollama pull/);
+    assert.match(text, /\/v1\/messages/);
+  });
+
   it("names a model without tool support", () => {
     assert.match(describeLlmError(noTools, ollama), /не поддерживает инструменты/);
   });
