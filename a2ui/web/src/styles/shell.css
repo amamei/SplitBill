@@ -24,6 +24,8 @@
 }
 .header-button:hover { border-color: var(--line-strong); }
 .header-button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.header-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.header-button--danger-hover:not(:disabled):hover { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
 
 .ghost-button {
   padding: var(--space-1) var(--space-2);
@@ -144,6 +146,9 @@
 
 @media (max-width: 420px) {
   .conn { font-size: 0; gap: 0; }
+  /* Icon-only "Новый счёт"; the label stays for screen readers (same rules as .visually-hidden). */
+  .header-button-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .header-button--danger-hover { padding: 0; width: 32px; justify-content: center; }
 }
 
 /* ---------- mobile tab bar ---------- */
@@ -448,6 +453,37 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 1px 5px; border
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(8px); }
+}
+
+/* ---------- confirm dialog ---------- */
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 40%);
+  animation: confirm-fade 120ms ease-out;
+}
+.confirm-dialog {
+  width: min(400px, 100%);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--panel);
+  color: var(--page-fg);
+  box-shadow: var(--shadow-2);
+}
+.confirm-dialog h2 { margin: 0 0 var(--space-2); font-size: var(--font-size-l); }
+.confirm-dialog p { margin: 0 0 var(--space-5); color: var(--muted); font-size: var(--font-size-s); line-height: 1.45; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+.header-button.confirm-danger { border-color: var(--danger); background: var(--danger); color: var(--page-bg); font-weight: 600; }
+.header-button.confirm-danger:not(:disabled):hover { filter: brightness(1.08); }
+
+@keyframes confirm-fade {
+  from { opacity: 0; }
 }
 
 /* ---------- spike page ---------- */

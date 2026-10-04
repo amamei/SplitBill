@@ -6,7 +6,9 @@ import { feed, onAction, rendererDataModel, type A2uiEnvelope, type FeedError } 
 export type ChatEvent =
   | { type: "delta"; turn: number; text: string }
   | { type: "done"; turn: number }
-  | { type: "note"; text: string };
+  | { type: "note"; text: string }
+  /** Session wiped server-side ("Новый счёт"); deleteSurface envelopes follow. */
+  | { type: "reset" };
 
 export interface TurnStatus {
   turn: number;
@@ -128,6 +130,10 @@ export function connect(): void {
     const event = JSON.parse((e as MessageEvent).data) as ChatEvent;
     if (event.type === "note") setActivity({ agentBusy: true });
     else if (event.type === "done") setActivity({ agentBusy: false });
+    else if (event.type === "reset") {
+      info("sse", "reset event");
+      setActivity({ agentBusy: false });
+    }
     publish({ kind: "chat", event });
   });
   es.addEventListener("status", (e) => publish({ kind: "status", status: JSON.parse((e as MessageEvent).data) }));
@@ -171,6 +177,19 @@ export function postChat(text: string): Promise<{ accepted: boolean }> {
 
 export function postAction(action: ActionPayload, a2uiClientDataModel: Record<string, unknown> | undefined) {
   return post<{ handled: boolean; forwarded?: boolean }>("/api/action", { sessionId, version: "v0.9", action, a2uiClientDataModel });
+}
+
+/** "Новый счёт": wipes the session on the server (409 while the agent answers). Not a model turn. */
+export async function postReset(): Promise<{ reset: boolean; deletedSurfaces: number }> {
+  info("api", "reset requested", { sessionId });
+  try {
+    const result = await post<{ reset: boolean; deletedSurfaces: number }>("/api/reset", { sessionId });
+    info("api", "reset done", { deletedSurfaces: result.deletedSurfaces });
+    return result;
+  } catch (err) {
+    warn("api", "reset failed", { message: err instanceof Error ? err.message : String(err) });
+    throw err;
+  }
 }
 
 export async function postUpload(file: File, text?: string): Promise<{ accepted: boolean }> {

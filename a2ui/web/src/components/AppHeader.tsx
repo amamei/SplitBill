@@ -9,10 +9,13 @@ interface Props {
   debugOpen: boolean;
   debugErrors: number;
   onToggleDebug: () => void;
+  /** "Новый счёт": omitted in spike mode. */
+  onNewBill?: () => void;
+  newBillDisabled?: boolean;
 }
 
-/** Sticky top bar: brand, connection state, activity bar, theme and debug controls. */
-export function AppHeader({ subtitle = "A2UI v0.9", offline, debugEnabled, debugOpen, debugErrors, onToggleDebug }: Props) {
+/** Sticky top bar: brand, connection state, activity bar, new-bill, theme and debug controls. */
+export function AppHeader({ subtitle = "A2UI v0.9", offline, debugEnabled, debugOpen, debugErrors, onToggleDebug, onNewBill, newBillDisabled }: Props) {
   const { pending, agentBusy } = useActivity();
   const working = pending > 0 || agentBusy;
   return (
@@ -29,6 +32,22 @@ export function AppHeader({ subtitle = "A2UI v0.9", offline, debugEnabled, debug
         </div>
         <ConnectionStatus offline={offline} />
         <div className="header-actions">
+          {onNewBill && (
+            <button
+              type="button"
+              id="new-bill"
+              className="header-button header-button--danger-hover"
+              onClick={onNewBill}
+              disabled={newBillDisabled}
+              title={newBillDisabled ? "Дождитесь ответа агента" : "Новый счёт — очистить всё"}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <path d="M3 4v5h5" />
+              </svg>
+              <span className="header-button-label">Новый счёт</span>
+            </button>
+          )}
           <ThemeToggle />
           {debugEnabled && (
             <button

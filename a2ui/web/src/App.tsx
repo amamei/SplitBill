@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { connect, subscribe } from "./a2ui/api";
+import { connect, postReset, subscribe } from "./a2ui/api";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { feed, onAction, processor, rendererDataModel, type FeedError } from "./a2ui/processor";
 import { AppHeader } from "./components/AppHeader";
 import { Chat } from "./components/Chat";
@@ -14,6 +15,7 @@ import { debug, info, isLogDebug } from "./lib/log";
 import { MOBILE_QUERY, useMediaQuery } from "./lib/media";
 import { parseFlag, readPref, writePref } from "./lib/prefs";
 import { isEditableTarget, matchShortcut } from "./lib/shortcuts";
+import { useActivity } from "./lib/useServerState";
 
 const spikeMode = new URLSearchParams(location.search).has("spike");
 let autoSwitchedToBill = false;
@@ -68,6 +70,10 @@ export function App() {
     () => isLogDebug() && (new URLSearchParams(location.search).get("log") === "open" || readPref("a2ui-debug-open", false, parseFlag)),
   );
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  /** Bumped on every server reset: remounts Chat and Surfaces, dropping their local state. */
+  const [resetEpoch, setResetEpoch] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { agentBusy } = useActivity();
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const paneRef = useRef(pane);
   paneRef.current = pane;
@@ -97,6 +103,10 @@ export function App() {
   );
   const debugFeed = useDebugFeed(onRenderError);
   const dismissToast = useCallback(() => setToast(null), []);
+  const closeConfirm = useCallback((confirmed: boolean) => {
+    debug("app", "confirm dialog close", { confirmed });
+    setConfirmOpen(false);
+  }, []);
 
   useEffect(() => {
     if (!spikeMode) connect();
@@ -112,6 +122,15 @@ export function App() {
       }
     });
     const unsub = subscribe((e) => {
+      if (e.kind === "chat" && e.event.type === "reset") {
+        // Every tab of the session gets this, not only the one that clicked "Новый счёт".
+        autoSwitchedToBill = false;
+        setUnseen({ chat: false, bill: false });
+        showPane("chat");
+        setResetEpoch((n) => n + 1);
+        info("app", "reset applied");
+        return;
+      }
       if (e.kind === "a2ui" && paneRef.current !== "bill") setUnseen((u) => (u.bill ? u : { ...u, bill: true }));
       if (e.kind === "chat" && e.event.type === "delta" && paneRef.current !== "chat") setUnseen((u) => (u.chat ? u : { ...u, chat: true }));
     });
@@ -128,7 +147,8 @@ export function App() {
       debug("shortcut", action);
       switch (action) {
         case "closeOverlays":
-          if (debugOpen) openDebug(false);
+          if (confirmOpen) closeConfirm(false);
+          else if (debugOpen) openDebug(false);
           else if (toast) dismissToast();
           else return;
           break;
@@ -154,7 +174,20 @@ export function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [debugEnabled, debugOpen, toast, openDebug, dismissToast, showPane]);
+  }, [confirmOpen, closeConfirm, debugEnabled, debugOpen, toast, openDebug, dismissToast, showPane]);
+
+  const handleNewBillConfirmed = useCallback(async () => {
+    debug("app", "new bill confirmed");
+    try {
+      await postReset();
+      closeConfirm(true);
+      setToast({ id: nextToastId++, text: "Начат новый счёт" });
+      requestAnimationFrame(() => composerRef.current?.focus());
+    } catch (err) {
+      closeConfirm(true);
+      setToast({ id: nextToastId++, text: err instanceof Error ? err.message : String(err) });
+    }
+  }, [closeConfirm]);
 
   const header = (
     <AppHeader
@@ -164,12 +197,23 @@ export function App() {
       debugOpen={debugOpen}
       debugErrors={debugFeed.renderErrors.length}
       onToggleDebug={() => openDebug(!debugOpen)}
+      onNewBill={spikeMode ? undefined : () => setConfirmOpen(true)}
+      newBillDisabled={agentBusy}
     />
   );
   const overlays = (
     <>
       {debugEnabled && <DebugDrawer open={debugOpen} feed={debugFeed} onClose={() => openDebug(false)} />}
       <Toast toast={toast} onDismiss={dismissToast} />
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Начать новый счёт?"
+        text="Участники, позиции и переписка будут удалены. Тема и настройки останутся."
+        confirmLabel="Очистить"
+        danger
+        onConfirm={handleNewBillConfirmed}
+        onCancel={() => closeConfirm(false)}
+      />
     </>
   );
 
@@ -198,10 +242,10 @@ export function App() {
       {header}
       <main className="app-main">
         <section className="pane pane-chat" {...paneProps("chat", "Чат с агентом")}>
-          <Chat composerRef={composerRef} />
+          <Chat key={resetEpoch} composerRef={composerRef} />
         </section>
         <section className="pane pane-surfaces" {...paneProps("bill", "Счёт")}>
-          <Surfaces />
+          <Surfaces key={resetEpoch} />
         </section>
       </main>
       {mobile && <MobileTabBar active={pane} unseen={unseen} onChange={showPane} />}

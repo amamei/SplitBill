@@ -35,17 +35,28 @@ function envelopeType(envelope: A2uiEnvelope): string {
 }
 
 /**
- * Applies envelopes one by one so a single bad message does not drop the rest.
- * A repeated `createSurface` for an existing surface (SSE replay after reload) is skipped:
- * the processor would throw "already exists".
+ * Why `feed()` must not hand this envelope to the processor (it would throw), or null.
+ * - `createSurface` for a live surface: SSE replay after reload ("already exists").
+ * - `deleteSurface` for a surface that is not live: e.g. a "Новый счёт" reset reaching a tab
+ *   that never had that surface.
  */
+export function skipReason(envelope: A2uiEnvelope, isLive: (surfaceId: string) => boolean): string | null {
+  const create = envelope.createSurface as { surfaceId?: string } | undefined;
+  if (create?.surfaceId && isLive(create.surfaceId)) return "duplicate createSurface";
+  const del = envelope.deleteSurface as { surfaceId?: string } | undefined;
+  if (del?.surfaceId && !isLive(del.surfaceId)) return "deleteSurface: unknown surface";
+  return null;
+}
+
+/** Applies envelopes one by one so a single bad message does not drop the rest. */
 export function feed(envelopes: readonly A2uiEnvelope[]): FeedError[] {
   debug("processor", "feed", { count: envelopes.length, types: envelopes.map(envelopeType) });
   const errors: FeedError[] = [];
+  const isLive = (id: string) => Boolean(processor.getSurface(id));
   for (const envelope of envelopes) {
-    const create = envelope.createSurface as { surfaceId?: string } | undefined;
-    if (create?.surfaceId && processor.getSurface(create.surfaceId)) {
-      debug("processor", "skip duplicate createSurface", create.surfaceId);
+    const reason = skipReason(envelope, isLive);
+    if (reason) {
+      debug("processor", `skip ${reason}`, envelope);
       continue;
     }
     try {

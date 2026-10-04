@@ -5,7 +5,7 @@ Setup before the demo:
 1. `ant auth status` shows an active profile (or `ANTHROPIC_API_KEY` is set in `a2ui/.env`).
 2. `cd a2ui && npm run dev`, open the URL the web process prints (`http://localhost:8787` when the path contains `#`, otherwise the Vite URL).
 3. Open the page once with `?debug=1` so the **Отладка** button appears in the header (remembered per browser). Keep the drawer **closed** during the demo — it collects turns and envelopes anyway — and open it (button or Ctrl/⌘+Shift+D, Esc closes) only when showing the TZ §7 evidence: per-turn latency/tokens and the raw A2UI stream.
-4. Fresh session: open the page in a new tab (the session id lives in `sessionStorage`).
+4. Fresh session: open the page in a new tab (the session id lives in `sessionStorage`), or click **Новый счёт** in the header between runs — after the confirm it wipes the bill, the model history and the message log on the server, and every tab of the session returns to the empty screen (the debug log keeps only the resulting `deleteSurface` envelopes).
 5. Navigation during the demo: on desktop use the sticky outline above the bill («Участники · Позиции · Редактор позиции · Итог») to jump between sections and the surface chips («Счёт», «Диаграмма 1») to switch surfaces. On a phone-sized window the bottom tabs switch «Чат / Счёт»; a dot marks the tab with updates. Screenshots: `docs/screenshots/`.
 
 Money is entered in lei (major units); the server stores integer bani. All values below are what the UI must show.

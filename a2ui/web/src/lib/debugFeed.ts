@@ -1,9 +1,9 @@
 // Collects the TZ §7 evidence (per-turn telemetry, raw A2UI envelopes, renderer rejections) from
-// app mount on, whether or not the debug drawer is open.
+// app mount on, whether or not the debug drawer is open. A "Новый счёт" reset starts it over.
 import { useEffect, useRef, useState } from "react";
 import { subscribe, type TurnStatus } from "../a2ui/api";
 import { onFeedError, type A2uiEnvelope, type FeedError } from "../a2ui/processor";
-import { warn } from "./log";
+import { info, warn } from "./log";
 
 export type LogEntry = { id: number; envelope: A2uiEnvelope; type: string; bytes: number; rejected: boolean };
 
@@ -42,7 +42,13 @@ export function useDebugFeed(onRenderError?: (errors: FeedError[]) => void): Deb
   useEffect(
     () =>
       subscribe((event) => {
-        if (event.kind === "status") {
+        if (event.kind === "chat" && event.event.type === "reset") {
+          // The deleteSurface envelopes that follow the reset land in the fresh log as evidence.
+          info("debug", "feed cleared (reset)");
+          setTurns([]);
+          setEntries([]);
+          setRenderErrors([]);
+        } else if (event.kind === "status") {
           setTurns((prev) => [...prev.filter((t) => t.turn !== event.status.turn), event.status].sort((a, b) => a.turn - b.turn));
         } else if (event.kind === "a2ui") {
           const type = envelopeType(event.envelope);
