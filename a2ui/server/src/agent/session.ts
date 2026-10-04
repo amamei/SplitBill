@@ -1,8 +1,9 @@
 // Per-browser-session state: one bill, UI selection, the last data model pushed to the
 // client, the model conversation, and the A2UI envelope log (replayed on SSE reconnect).
+// `reset()` wipes all of it in place ("Новый счёт") while SSE subscribers stay attached.
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { createScope } from "../log.js";
-import { envelopeType, type A2uiEnvelope } from "../a2ui/envelopes.js";
+import { deleteSurface, envelopeType, type A2uiEnvelope } from "../a2ui/envelopes.js";
 import { BillStore } from "../domain/store.js";
 import type { BillViewModel } from "../projector/view-model.js";
 import { projectBill, type UiState } from "../projector/project.js";
@@ -16,7 +17,8 @@ export type SessionSink = (event: SseEventName, data: unknown) => void;
 
 export class Session {
   readonly id: string;
-  readonly store = new BillStore();
+  /** Replaced (not mutated) by reset(); callers must re-read `session.store`, never cache it. */
+  store = new BillStore();
   billId?: string;
   ui: UiState = {};
   /** Data model of the `bill` surface as last sent to the client. */
@@ -74,6 +76,40 @@ export class Session {
       logger.debug("emit", { session: this.id, type, bytes: JSON.stringify(envelope).length });
       this.send("a2ui", envelope);
     }
+  }
+
+  /**
+   * Starts over: drops the bill, UI state, model history and telemetry, tells clients to clear
+   * (`chat {type:"reset"}`), deletes every live surface, then empties the envelope log so a
+   * reconnect replays nothing. Same object, same id — SSE sinks keep their subscription.
+   * Throws while a model turn is running (it would write its history back afterwards).
+   */
+  reset(): { deletedSurfaces: string[] } {
+    if (this.busy) {
+      logger.warn("reset refused: busy", { session: this.id });
+      throw new Error("session busy");
+    }
+    const deletedSurfaces = [...this.surfaces];
+    const before = { hadBill: Boolean(this.billId), messages: this.messages.length, envelopes: this.envelopeLog.length, turns: this.telemetry.length };
+
+    this.store = new BillStore();
+    this.billId = undefined;
+    this.ui = {};
+    this.lastVm = undefined;
+    this.modelSeenVersion = 0;
+    this.messages = [];
+    this.telemetry = [];
+    this.streamedRenders.clear();
+    this.turnCounter = 0;
+    this.recorder = undefined;
+    logger.debug("reset: state cleared", { session: this.id, ...before });
+
+    this.send("chat", { type: "reset" });
+    this.emit(deletedSurfaces.map((id) => deleteSurface(id)), undefined);
+    this.envelopeLog.length = 0;
+
+    logger.info("reset", { session: this.id, deletedSurfaces, ...before });
+    return { deletedSurfaces };
   }
 }
 

@@ -115,6 +115,15 @@ export function createApp(): express.Express {
     res.json({ handled: false, forwarded: true });
   });
 
+  // "Новый счёт": wipe the session in place; clients clear themselves from the SSE events.
+  app.post("/api/reset", (req, res) => {
+    const session = sessions.get(parse(z.object({ sessionId: SessionId }), req.body).sessionId);
+    if (session.busy) throw new HttpError(409, "BUSY", "Агент ещё отвечает — дождитесь ответа и попробуйте снова");
+    const { deletedSurfaces } = session.reset();
+    logger.info("reset", { session: session.id, deletedSurfaces: deletedSurfaces.length });
+    res.json({ reset: true, deletedSurfaces: deletedSurfaces.length });
+  });
+
   app.post("/api/upload", (req, res) => {
     const body = parse(UploadBody, req.body);
     const content: UserContent = [
