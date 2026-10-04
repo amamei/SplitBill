@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import "./a2ui.css";
 import { connect, subscribe } from "./a2ui/api";
 import { feed, onAction, rendererDataModel, type FeedError } from "./a2ui/processor";
 import { Chat } from "./components/Chat";
 import { MessageLog } from "./components/MessageLog";
 import { Surfaces } from "./components/Surfaces";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { spikeFixtures } from "./fixtures/spike";
 
 const spikeMode = new URLSearchParams(location.search).has("spike");
@@ -101,6 +101,7 @@ export function App() {
         <h1>
           Split Bill · A2UI v0.9 <ConnectionDot />
         </h1>
+        <ThemeToggle />
       </header>
       <FeedErrors />
       <main className="app-main">

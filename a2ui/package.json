@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "concurrently -n server,web -c blue,green \"npm -w server run dev\" \"npm -w web run dev\"",
-    "test": "npm -w server test",
+    "test": "npm -w server test && npm -w web test",
     "build": "npm -w server run build && npm -w web run build",
     "typecheck": "npm -w server run typecheck && npm -w web run typecheck"
   },

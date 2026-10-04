@@ -1,0 +1,81 @@
+/* A2UI surface styling (scoped under .a2ui-root, the wrapper each surface is rendered into). */
+
+.a2ui-root {
+  --a2ui-color-primary: var(--accent);
+  --a2ui-color-primary-hover: var(--accent-hover);
+  --a2ui-color-on-primary: var(--panel);
+  --a2ui-color-surface: var(--panel);
+  --a2ui-color-on-surface: var(--page-fg);
+  --a2ui-color-background: var(--page-bg);
+  --a2ui-color-on-background: var(--page-fg);
+  --a2ui-color-border: var(--line);
+  --a2ui-color-input: var(--panel);
+  --a2ui-color-on-input: var(--page-fg);
+  --a2ui-border-radius: 8px;
+  --a2ui-card-background: var(--panel);
+  --a2ui-card-border: 1px solid var(--line);
+  --a2ui-card-border-radius: 12px;
+  --a2ui-card-box-shadow: none;
+  --a2ui-card-padding: 14px;
+  --a2ui-card-margin: 0 0 12px 0;
+  --a2ui-text-caption-color: var(--muted);
+  --a2ui-checkbox-margin: 2px 0;
+  --a2ui-checkbox-label-font-weight: 500;
+  color: var(--page-fg);
+  margin-bottom: 16px;
+}
+
+.a2ui-root p,
+.a2ui-root h1,
+.a2ui-root h2,
+.a2ui-root h3,
+.a2ui-root h4,
+.a2ui-root h5 {
+  margin: 0;
+}
+.a2ui-root h1 { font-size: 1.5rem; }
+.a2ui-root h2 { font-size: 1.25rem; }
+.a2ui-root h3 { font-size: 1.1rem; }
+.a2ui-root h4 { font-size: 1rem; }
+
+.a2ui-root button {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: var(--a2ui-border-radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--page-fg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.a2ui-root button:hover { border-color: var(--accent); }
+.a2ui-root button:disabled { opacity: 0.5; cursor: default; }
+.a2ui-root button p { margin: 0; }
+
+.a2ui-root input:not([type="checkbox"]),
+.a2ui-root textarea,
+.a2ui-root select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 6px 8px;
+  border-radius: var(--a2ui-border-radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--page-fg);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.a2ui-root input:focus,
+.a2ui-root textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.a2ui-root label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
