@@ -1,0 +1,22 @@
+{
+  "name": "a2ui-split-bill",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Split Bill hackathon demo — participant #2: Google A2UI v0.9 rendered with @a2ui/react, Claude as the agent",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm -w server run dev\" \"npm -w web run dev\"",
+    "test": "npm -w server test",
+    "build": "npm -w server run build && npm -w web run build",
+    "typecheck": "npm -w server run typecheck && npm -w web run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
