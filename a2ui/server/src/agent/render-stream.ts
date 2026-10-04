@@ -4,7 +4,7 @@
 // or deletes the half-built surface and returns the errors to the model.
 import { createScope } from "../log.js";
 import { ComponentStreamExtractor } from "../a2ui/stream-extract.js";
-import { createSurface, deleteSurface, updateComponents, type A2uiComponent, type A2uiEnvelope } from "../a2ui/envelopes.js";
+import { createSurface, deleteSurface, surfaceTheme, updateComponents, type A2uiComponent, type A2uiEnvelope } from "../a2ui/envelopes.js";
 import type { Session } from "./session.js";
 
 const logger = createScope("a2ui.stream");
@@ -55,7 +55,7 @@ export function createRenderStreamer(session: Session, opts: { enabled: boolean 
           a.surfaceId = surfaceId;
           const envelopes: A2uiEnvelope[] = [];
           if (session.surfaces.has(surfaceId)) envelopes.push(deleteSurface(surfaceId));
-          envelopes.push(createSurface(surfaceId, { sendDataModel: true }));
+          envelopes.push(createSurface(surfaceId, { sendDataModel: true, theme: surfaceTheme(surfaceId) }));
           session.streamedRenders.set(toolUseId, { surfaceId, sent: 0 });
           started.add(toolUseId);
           session.emit(envelopes);

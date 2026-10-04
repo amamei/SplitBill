@@ -34,3 +34,23 @@ describe("buildSystemPrompt", () => {
     assert.ok(prompt.length < 120_000, `prompt is ${prompt.length} chars`);
   });
 });
+
+describe("layout guide", () => {
+  const prompt = buildSystemPrompt();
+
+  it("is delimited and placed before the schema block", () => {
+    const begin = prompt.indexOf("---BEGIN LAYOUT GUIDE---");
+    assert.ok(begin > 0 && prompt.includes("---END LAYOUT GUIDE---"));
+    assert.ok(begin < prompt.indexOf("---BEGIN A2UI JSON SCHEMA---"));
+  });
+
+  it("tells the model about card titles, variants and the hint paths", () => {
+    for (const s of ["«Участники»", "«Итог»", '"primary"', '"borderless"', "/hints/people", "/hints/items", "/hints/editor", "/hints/transfers", "at most 4 direct children"]) {
+      assert.ok(prompt.includes(s), s);
+    }
+  });
+
+  it("the sample projection carries hints", () => {
+    assert.ok(prompt.includes('"hints":{"people":"","items":"","editor":"","transfers":""}'));
+  });
+});

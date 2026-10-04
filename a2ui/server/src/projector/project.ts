@@ -4,7 +4,7 @@ import { allocate, type Allocation } from "../domain/allocate.js";
 import { formatMinor } from "../domain/money.js";
 import { summarize } from "../domain/summary.js";
 import type { Bill, Item, Person, Split, SplitType } from "../domain/types.js";
-import type { BillViewModel, DraftVm, EditorVm } from "./view-model.js";
+import type { BillViewModel, DraftVm, EditorVm, HintsVm } from "./view-model.js";
 
 const logger = createScope("projector.projectBill");
 
@@ -23,6 +23,13 @@ export interface UiState {
 }
 
 export const EMPTY_DRAFT: DraftVm = { personName: "", itemTitle: "", itemPrice: "" };
+
+export const HINTS = {
+  people: "Добавьте участников — минимум двух.",
+  items: "Пока нет позиций. Добавьте первую ниже.",
+  editor: "Выберите позицию, чтобы настроить деление.",
+  transfers: "Все в расчёте.",
+} as const;
 
 const SPLIT_TYPE_TEXT: Record<SplitType, string> = { equal: "Поровну", exact: "Суммы", shares: "Доли" };
 
@@ -60,13 +67,24 @@ export function projectBill(bill: Bill, ui: UiState = {}): BillViewModel {
         amountText: formatMinor(t.amount),
       })),
     },
+    hints: projectHints(bill, Boolean(selected), summary.transfers.length),
     errors: {
       general: ui.errors?.general ?? { message: "" },
       removePerson: ui.errors?.removePerson ?? { message: "", items: [] },
     },
   };
   logger.debug("projected", { billId: bill.id, items: bill.items.length, selected: selected?.id, splitType: vm.editor.splitType });
+  logger.debug("hints", vm.hints);
   return vm;
+}
+
+function projectHints(bill: Bill, hasSelection: boolean, transfers: number): HintsVm {
+  return {
+    people: bill.people.length < 2 ? HINTS.people : "",
+    items: bill.items.length === 0 ? HINTS.items : "",
+    editor: hasSelection ? "" : HINTS.editor,
+    transfers: bill.items.length > 0 && transfers === 0 ? HINTS.transfers : "",
+  };
 }
 
 function projectEditor(bill: Bill, item: Item, order: string[], ui: UiState): EditorVm {

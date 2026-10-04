@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateComponents, validateEnvelope, type ValidationResult } from "../validate.js";
-import { CATALOG_ID, createSurface, deleteSurface, updateComponents, updateDataModel } from "../envelopes.js";
+import { CATALOG_ID, createSurface, deleteSurface, surfaceTheme, updateComponents, updateDataModel } from "../envelopes.js";
 
 const examplesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "spec", "v0_9", "examples");
 const examples = fs.readdirSync(examplesDir).map((f) => ({ ...JSON.parse(fs.readFileSync(path.join(examplesDir, f), "utf8")), file: f }));
@@ -45,6 +45,15 @@ describe("our envelopes", () => {
     const envelopes = [createSurface("bill"), updateComponents("bill", tree()), updateDataModel("bill", { items: [] }), updateDataModel("bill", "x", "/editor/title"), deleteSurface("bill")];
     for (const e of envelopes) assert.deepEqual(validateEnvelope(e), { ok: true });
     assert.equal((envelopes[0] as { createSurface: { catalogId: string } }).createSurface.catalogId, CATALOG_ID);
+  });
+
+  it("createSurface with the bill and chart themes is valid", () => {
+    for (const id of ["bill", "chart-1"]) {
+      const e = createSurface(id, { theme: surfaceTheme(id) });
+      assert.deepEqual(validateEnvelope(e), { ok: true }, id);
+    }
+    assert.deepEqual(surfaceTheme("bill"), { primaryColor: "#2f6f5e", agentDisplayName: "Split Bill" });
+    assert.deepEqual(surfaceTheme("chart-1"), { primaryColor: "#2f6f5e" });
   });
 
   it("a valid tree with a template passes", () => {

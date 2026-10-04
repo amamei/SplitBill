@@ -1,4 +1,4 @@
-// Minimal updateDataModel patches between two view models. /editor and /draft are diffed
+// Minimal updateDataModel patches between two view models. /editor, /draft and /hints are diffed
 // per field so a server push never overwrites inputs the user is editing but has not saved
 // (A2UI inputs live only in the client data model until an action fires).
 import { createScope } from "../log.js";
@@ -9,7 +9,7 @@ const logger = createScope("projector.diff");
 export type VmPatch = { path: string; value: unknown };
 
 const WHOLE_KEYS = ["bill", "people", "items", "summary", "errors"] as const;
-const FIELD_KEYS = ["draft", "editor"] as const;
+const FIELD_KEYS = ["draft", "editor", "hints"] as const;
 
 export function diffViewModel(prev: BillViewModel | undefined, next: BillViewModel): VmPatch[] {
   if (!prev) {

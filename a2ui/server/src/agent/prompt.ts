@@ -59,6 +59,21 @@ const A2UI_RULES = `## A2UI v0.9 rules (render_surface)
 - Allowed components: ${COMPONENT_NAMES.join(", ")}. Nothing else exists.
 - If render_surface returns an error, fix exactly the listed problems and call it again.`;
 
+// How the bill should look. The web client builds its section navigation from Card titles and
+// wraps Rows on phones, so these rules are about structure, not pixels.
+const LAYOUT_GUIDE = `---BEGIN LAYOUT GUIDE---
+## Layout guide (bill surface; follow it for other surfaces where it applies)
+1. Root is a Column in this order: header Row → error area → participants Card → items Card → editor Card → summary Card.
+2. Every Card starts with a Text variant "h3" title: «Участники», «Позиции», «Редактор позиции», «Итог». The client builds its navigation from these titles — never skip them.
+3. Header Row: "justify": "spaceBetween", "align": "center"; the bill title as "h2", the total as "h3".
+4. A Row inside a list template has at most 4 direct children, so it fits a phone screen. Put secondary details (payer, split, the «Напомнить» button) in a Column under the main text, or in a nested Row of caption Texts.
+5. Button variants: exactly one "primary" per Card for its main action (Добавить / Добавить позицию / Сохранить); "borderless" for destructive or secondary actions (Удалить, Напомнить, Исправить); default otherwise.
+6. Separate a Card's list from its add form with a Divider.
+7. Empty states: a caption Text bound to /hints/people, /hints/items, /hints/editor, /hints/transfers right under the matching Card title (transfers: under «Кто кому должен»). An empty string renders nothing.
+8. Summary: above the rows template put a header Row of caption Texts «Участник», «Доля», «Платил», «Баланс» with the same weights as the row's children; money Texts go last in each row.
+9. Short Russian labels; no emoji in buttons.
+---END LAYOUT GUIDE---`;
+
 function schemaBlock(): string {
   return [
     "---BEGIN A2UI JSON SCHEMA---",
@@ -119,7 +134,7 @@ let cached: { text: string; version: string } | undefined;
 
 export function buildSystemPrompt(): string {
   if (cached) return cached.text;
-  const text = [ROLE, WORKFLOW, A2UI_RULES, schemaBlock(), examplesBlock(), viewModelBlock(), actionsBlock()].join("\n\n");
+  const text = [ROLE, WORKFLOW, A2UI_RULES, LAYOUT_GUIDE, schemaBlock(), examplesBlock(), viewModelBlock(), actionsBlock()].join("\n\n");
   const version = crypto.createHash("sha256").update(text).digest("hex").slice(0, 10);
   cached = { text, version };
   logger.info("built", { chars: text.length, promptVersion: version });

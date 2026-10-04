@@ -1,6 +1,7 @@
 // Hand-written `bill` surface used ONLY by /api/debug/seed (A2UI_DEBUG=1) to exercise the
-// UI-action loop without the model, and by tests to prove the prompt's layout contract is
-// buildable from the basic catalog. Not part of the demo: there the model authors the tree.
+// UI-action loop without the model, and by tests to prove the prompt's layout contract (incl.
+// the LAYOUT GUIDE) is buildable from the basic catalog. Not part of the demo: there the model
+// authors the tree.
 import type { A2uiComponent } from "../a2ui/envelopes.js";
 
 const text = (id: string, value: string | { path: string }, extra: Record<string, unknown> = {}): A2uiComponent => ({
@@ -13,6 +14,8 @@ const button = (id: string, label: string, name: string, context: Record<string,
   { id, component: "Button", child: `${id}_lbl`, action: { event: { name, context } }, ...extra },
   text(`${id}_lbl`, label),
 ];
+const caption = (id: string, value: string | { path: string }, extra: Record<string, unknown> = {}) => text(id, value, { variant: "caption", ...extra });
+const divider = (id: string): A2uiComponent => ({ id, component: "Divider" });
 const card = (id: string, children: string[]): A2uiComponent[] => [
   { id, component: "Card", child: `${id}_col` },
   { id: `${id}_col`, component: "Column", children },
@@ -20,8 +23,8 @@ const card = (id: string, children: string[]): A2uiComponent[] => [
 
 export const REFERENCE_BILL_TREE: A2uiComponent[] = [
   { id: "root", component: "Column", children: ["header", "errors", "people_card", "items_card", "editor_card", "summary_card"] },
-  { id: "header", component: "Row", align: "center", children: ["title", "total"] },
-  text("title", { path: "/bill/title" }, { variant: "h2", weight: 1 }),
+  { id: "header", component: "Row", justify: "spaceBetween", align: "center", children: ["title", "total"] },
+  text("title", { path: "/bill/title" }, { variant: "h2" }),
   text("total", { path: "/bill/totalText" }, { variant: "h3" }),
 
   { id: "errors", component: "Column", children: ["general_error", "rp_message", "rp_list"] },
@@ -30,37 +33,46 @@ export const REFERENCE_BILL_TREE: A2uiComponent[] = [
   { id: "rp_list", component: "List", children: { componentId: "rp_row", path: "/errors/removePerson/items" } },
   { id: "rp_row", component: "Row", align: "center", children: ["rp_title", "rp_fix"] },
   text("rp_title", { path: "title" }, { weight: 1 }),
-  ...button("rp_fix", "Исправить", "fix_item", { itemId: { path: "itemId" } }),
+  ...button("rp_fix", "Исправить", "fix_item", { itemId: { path: "itemId" } }, { variant: "borderless" }),
 
-  ...card("people_card", ["people_h", "people_list", "add_person_row"]),
+  ...card("people_card", ["people_h", "people_hint", "people_list", "people_div", "add_person_row"]),
   text("people_h", "Участники", { variant: "h3" }),
+  caption("people_hint", { path: "/hints/people" }),
   { id: "people_list", component: "List", children: { componentId: "person_row", path: "/people" } },
   { id: "person_row", component: "Row", align: "end", children: ["person_name", "person_rename", "person_remove"] },
   { id: "person_name", component: "TextField", label: "Имя", value: { path: "name" }, weight: 1 },
   ...button("person_rename", "Переименовать", "rename_person", { personId: { path: "id" }, name: { path: "name" } }),
-  ...button("person_remove", "Удалить", "remove_person", { personId: { path: "id" } }),
+  ...button("person_remove", "Удалить", "remove_person", { personId: { path: "id" } }, { variant: "borderless" }),
+  divider("people_div"),
   { id: "add_person_row", component: "Row", align: "end", children: ["new_person", "add_person"] },
   { id: "new_person", component: "TextField", label: "Новый участник", value: { path: "/draft/personName" }, weight: 1 },
-  ...button("add_person", "Добавить", "add_person", { name: { path: "/draft/personName" } }),
+  ...button("add_person", "Добавить", "add_person", { name: { path: "/draft/personName" } }, { variant: "primary" }),
 
-  ...card("items_card", ["items_h", "items_list", "add_item_row"]),
+  ...card("items_card", ["items_h", "items_hint", "items_list", "items_div", "add_item_row"]),
   text("items_h", "Позиции", { variant: "h3" }),
+  caption("items_hint", { path: "/hints/items" }),
   { id: "items_list", component: "List", children: { componentId: "item_row", path: "/items" } },
-  { id: "item_row", component: "Row", align: "center", children: ["item_sel", "item_title", "item_price", "item_payer", "item_split", "item_open", "item_del"] },
+  { id: "item_row", component: "Row", align: "center", children: ["item_main", "item_price", "item_open", "item_del"] },
+  { id: "item_main", component: "Column", children: ["item_title_row", "item_meta"], weight: 3 },
+  { id: "item_title_row", component: "Row", align: "center", children: ["item_sel", "item_title"] },
   text("item_sel", { path: "isSelectedText" }),
-  text("item_title", { path: "title" }, { weight: 2 }),
+  text("item_title", { path: "title" }, { weight: 1 }),
+  { id: "item_meta", component: "Row", children: ["item_payer_lbl", "item_payer", "item_split"] },
+  caption("item_payer_lbl", "платил"),
+  caption("item_payer", { path: "payerName" }),
+  caption("item_split", { path: "splitText" }, { weight: 1 }),
   text("item_price", { path: "priceText" }, { weight: 1 }),
-  text("item_payer", { path: "payerName" }, { weight: 1 }),
-  text("item_split", { path: "splitText" }, { variant: "caption", weight: 3 }),
   ...button("item_open", "Открыть", "select_item", { itemId: { path: "id" } }),
   ...button("item_del", "Удалить", "remove_item", { itemId: { path: "id" } }, { variant: "borderless" }),
+  divider("items_div"),
   { id: "add_item_row", component: "Row", align: "end", children: ["new_item_title", "new_item_price", "add_item"] },
   { id: "new_item_title", component: "TextField", label: "Позиция", value: { path: "/draft/itemTitle" }, weight: 2 },
   { id: "new_item_price", component: "TextField", label: "Цена", value: { path: "/draft/itemPrice" }, weight: 1 },
-  ...button("add_item", "Добавить позицию", "add_item", { title: { path: "/draft/itemTitle" }, price: { path: "/draft/itemPrice" } }),
+  ...button("add_item", "Добавить позицию", "add_item", { title: { path: "/draft/itemTitle" }, price: { path: "/draft/itemPrice" } }, { variant: "primary" }),
 
-  ...card("editor_card", ["editor_h", "editor_fields", "split_row", "payer_h", "payer_list", "equal_list", "exact_list", "shares_list", "remaining", "editor_error", "save"]),
+  ...card("editor_card", ["editor_h", "editor_hint", "editor_fields", "split_row", "payer_h", "payer_list", "equal_list", "exact_list", "shares_list", "remaining", "editor_error", "editor_div", "save"]),
   text("editor_h", "Редактор позиции", { variant: "h3" }),
+  caption("editor_hint", { path: "/hints/editor" }),
   { id: "editor_fields", component: "Row", children: ["ed_title", "ed_price"] },
   { id: "ed_title", component: "TextField", label: "Название", value: { path: "/editor/title" }, weight: 2 },
   { id: "ed_price", component: "TextField", label: "Цена", value: { path: "/editor/priceText" }, weight: 1 },
@@ -69,7 +81,7 @@ export const REFERENCE_BILL_TREE: A2uiComponent[] = [
   ...button("split_equal", "Поровну", "set_split_type", { type: "equal" }),
   ...button("split_exact", "Суммы", "set_split_type", { type: "exact" }),
   ...button("split_shares", "Доли", "set_split_type", { type: "shares" }),
-  text("payer_h", "Платил", { variant: "caption" }),
+  caption("payer_h", "Платил"),
   { id: "payer_list", component: "List", direction: "horizontal", children: { componentId: "payer_btn", path: "/editor/payerOptions" } },
   { id: "payer_btn", component: "Button", child: "payer_btn_row", action: { event: { name: "set_payer", context: { personId: { path: "id" } } } } },
   { id: "payer_btn_row", component: "Row", children: ["payer_mark", "payer_name"] },
@@ -89,19 +101,27 @@ export const REFERENCE_BILL_TREE: A2uiComponent[] = [
   { id: "sh_weight", component: "TextField", label: "Доля", value: { path: "weightText" }, weight: 1 },
   text("sh_share", { path: "shareText" }, { weight: 1 }),
   text("remaining", { path: "/editor/remainingText" }, { variant: "h4" }),
-  text("editor_error", { path: "/editor/error" }, { variant: "caption" }),
+  caption("editor_error", { path: "/editor/error" }),
+  divider("editor_div"),
   ...button("save", "Сохранить", "save_item", { editor: { path: "/editor" } }, { variant: "primary" }),
 
-  ...card("summary_card", ["summary_h", "summary_list", "transfers_h", "transfers_list"]),
+  ...card("summary_card", ["summary_h", "sum_header", "summary_list", "transfers_h", "transfers_hint", "transfers_list"]),
   text("summary_h", "Итог", { variant: "h3" }),
+  { id: "sum_header", component: "Row", children: ["sh_who", "sh_owes", "sh_paid", "sh_balance"] },
+  caption("sh_who", "Участник", { weight: 2 }),
+  caption("sh_owes", "Доля", { weight: 1 }),
+  caption("sh_paid", "Платил", { weight: 1 }),
+  caption("sh_balance", "Баланс", { weight: 1 }),
   { id: "summary_list", component: "List", children: { componentId: "sum_row", path: "/summary/rows" } },
-  { id: "sum_row", component: "Row", align: "center", children: ["s_name", "s_owes", "s_paid", "s_balance", "s_remind"] },
-  text("s_name", { path: "name" }, { weight: 2 }),
+  { id: "sum_row", component: "Row", align: "center", children: ["s_who", "s_owes", "s_paid", "s_balance"] },
+  { id: "s_who", component: "Column", children: ["s_name", "s_remind"], align: "start", weight: 2 },
+  text("s_name", { path: "name" }),
+  ...button("s_remind", "Напомнить", "remind", { personId: { path: "personId" } }, { variant: "borderless" }),
   text("s_owes", { path: "owesText" }, { weight: 1 }),
   text("s_paid", { path: "paidText" }, { weight: 1 }),
   text("s_balance", { path: "balanceText" }, { weight: 1 }),
-  ...button("s_remind", "Напомнить", "remind", { personId: { path: "personId" } }, { variant: "borderless" }),
   text("transfers_h", "Кто кому должен", { variant: "h4" }),
+  caption("transfers_hint", { path: "/hints/transfers" }),
   { id: "transfers_list", component: "List", children: { componentId: "tr_row", path: "/summary/transfers" } },
   text("tr_row", { path: "text" }),
 ];

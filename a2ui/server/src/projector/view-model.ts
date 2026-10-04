@@ -46,6 +46,14 @@ export const BillViewModelSchema = z
       rows: z.array(z.object({ personId: text, name: text, owesText: text, paidText: text, balanceText: text })),
       transfers: z.array(z.object({ fromId: text, toId: text, text: text, amountText: text })),
     }),
+    hints: z
+      .object({
+        people: text.describe("«Добавьте участников…» while there are fewer than two people, else empty"),
+        items: text.describe("«Пока нет позиций…» while the bill has no items, else empty"),
+        editor: text.describe("«Выберите позицию…» while no item is open in the editor, else empty"),
+        transfers: text.describe("«Все в расчёте.» when there are items but nobody owes anybody, else empty"),
+      })
+      .describe("Empty-state hints filled by the server; bind each to a caption Text at the top of its section (empty string renders nothing)"),
     errors: z.object({
       general: z
         .object({ message: text })
@@ -61,6 +69,7 @@ export const BillViewModelSchema = z
 export type BillViewModel = z.infer<typeof BillViewModelSchema>;
 export type EditorVm = BillViewModel["editor"];
 export type DraftVm = BillViewModel["draft"];
+export type HintsVm = BillViewModel["hints"];
 
 export function billViewModelJsonSchema(): Record<string, unknown> {
   const schema = zodToJsonSchema(BillViewModelSchema, { $refStrategy: "none" }) as Record<string, unknown>;

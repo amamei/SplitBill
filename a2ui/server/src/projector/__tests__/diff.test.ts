@@ -45,3 +45,18 @@ describe("diffViewModel", () => {
     assert.deepEqual(diffViewModel(vm, next), [{ path: "/draft/personName", value: "" }]);
   });
 });
+
+describe("diffViewModel hints", () => {
+  it("adding the first item clears /hints/items and /hints/editor with field patches", () => {
+    const store = new BillStore();
+    const b = store.createBill("Новый", "MDL", ["Аня", "Боря"]);
+    const before = projectBill(store.getBill(b.id));
+    store.addItem(b.id, { title: "Пицца", price: 30000, paidById: store.getBill(b.id).people[0]!.id });
+    const patches = diffViewModel(before, projectBill(store.getBill(b.id)));
+    const byPath = new Map(patches.map((p) => [p.path, p.value]));
+    assert.equal(byPath.get("/hints/items"), "");
+    assert.equal(byPath.get("/hints/editor"), "");
+    assert.ok(!byPath.has("/hints"), "hints are diffed per field");
+    assert.ok(!byPath.has("/hints/people"), "unchanged hint is not re-sent");
+  });
+});

@@ -8,6 +8,7 @@ import { createScope } from "../log.js";
 import {
   createSurface,
   deleteSurface,
+  surfaceTheme,
   updateComponents,
   updateDataModel,
   type A2uiComponent,
@@ -193,7 +194,7 @@ export function renderSurface(session: Session, input: z.infer<typeof RenderInpu
     if (rest.length > 0) envelopes.push(updateComponents(surfaceId, rest));
   } else {
     if (session.surfaces.has(surfaceId)) envelopes.push(deleteSurface(surfaceId));
-    envelopes.push(createSurface(surfaceId, { sendDataModel: true }), updateComponents(surfaceId, components as A2uiComponent[]));
+    envelopes.push(createSurface(surfaceId, { sendDataModel: true, theme: surfaceTheme(surfaceId) }), updateComponents(surfaceId, components as A2uiComponent[]));
   }
   envelopes.push(updateDataModel(surfaceId, value, "/"));
   if (surfaceId === "bill") session.lastVm = value as typeof session.lastVm; // a fresh surface gets the full model

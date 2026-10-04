@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { BillStore } from "../../domain/store.js";
 import { buildControlExample } from "../../domain/fixtures/control-example.js";
-import { projectBill } from "../project.js";
+import { HINTS, projectBill } from "../project.js";
 import { BillViewModelSchema, billViewModelJsonSchema, type BillViewModel } from "../view-model.js";
 
 const store = new BillStore();
@@ -100,5 +100,30 @@ describe("projectBill on the control example", () => {
     const schema = billViewModelJsonSchema();
     assert.equal(schema.type, "object");
     assert.ok(JSON.stringify(schema).includes("sharesRows"));
+  });
+});
+
+describe("empty-state hints", () => {
+  it("are all empty for the control example (items, people, transfers present)", () => {
+    assert.deepEqual(projectBill(bill).hints, { people: "", items: "", editor: "", transfers: "" });
+  });
+
+  it("guide an empty bill: people, items and editor hints, no transfers hint", () => {
+    const s = new BillStore();
+    const empty = s.createBill("Пусто");
+    const vm = projectBill(s.getBill(empty.id));
+    assert.deepEqual(vm.hints, { people: HINTS.people, items: HINTS.items, editor: HINTS.editor, transfers: "" });
+    assert.equal(BillViewModelSchema.safeParse(vm).success, true);
+  });
+
+  it("say «Все в расчёте» when there are items but nobody owes anybody", () => {
+    const s = new BillStore();
+    const b = s.createBill("Сам за себя", "MDL", ["Аня", "Боря"]);
+    s.addItem(b.id, { title: "Кофе", price: 5000, paidById: s.getBill(b.id).people[0]!.id, split: { type: "exact", amounts: { [s.getBill(b.id).people[0]!.id]: 5000 } } });
+    const vm = projectBill(s.getBill(b.id));
+    assert.equal(vm.hints.transfers, HINTS.transfers);
+    assert.equal(vm.hints.people, "");
+    assert.equal(vm.hints.items, "");
+    assert.equal(vm.hints.editor, "");
   });
 });

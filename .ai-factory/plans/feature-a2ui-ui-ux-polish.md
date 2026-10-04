@@ -292,7 +292,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
   - Tests: create `a2ui/web/src/a2ui/__tests__/catalog.test.ts`. Assert that `appCatalog`'s id equals `basicCatalog`'s id and that the component name sets are equal (same 18 names). Importing React components under `node --test` with tsx must work without a DOM. If it does not, test a pure `variantClass(variant)` helper exported from `catalog.ts` instead, and cover the catalog equality in the T11 browser check.
   - Done when, with the seeded control example, "Сохранить" (primary), "Добавить" (default) and "Удалить" / "Напомнить" (borderless) are visually distinct, all actions still dispatch (click each action once in the T11 run), and `npm -w web run typecheck` passes.
 
-- [ ] **T10. Server: layout guide in the prompt, empty-state hints and surface theme**
+- [x] **T10. Server: layout guide in the prompt, empty-state hints and surface theme**
   - View-model, in `a2ui/server/src/projector/view-model.ts`:
     - Add `hints: z.object({ people: z.string(), items: z.string(), editor: z.string(), transfers: z.string() }).strict()` to `BillViewModelSchema`.
   - `a2ui/server/src/projector/project.ts` fills these when the matching lists are empty and uses `""` otherwise:
@@ -328,6 +328,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
     - `a2ui/__tests__/validate.test.ts`: `createSurface` with `DEFAULT_THEME` validates.
     - `agent/__tests__/tools.test.ts` and `render-stream.test.ts`: update any deep equality on the `createSurface` object.
   - Run `npm -w server run count:prompt` and note the new prompt size in REPORT (T12).
+  - Implementation note: to keep ≤4 children per template Row, the summary row is name+«Напомнить» (Column) · Доля · Платил · Баланс, and the item row is Column(title row + caption meta row) · price · Открыть · Удалить. The `people` hint shows while there are fewer than two participants. Prompt grew from 50,814 to 53,060 chars (21,055 input tokens).
   - Done when `npm test` is green, `count:prompt` shows a modest increase (target < +3k tokens), and the seeded bill shows the hint captions and the restructured rows.
 
 ### Phase 5: Verification and docs
