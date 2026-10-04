@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/http/server.ts",
     "start": "tsx src/http/server.ts",
-    "test": "vitest run",
+    "test": "LOG_LEVEL=error node --import tsx --test \"src/**/__tests__/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json"
   },
@@ -22,7 +22,6 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.4",
     "tsx": "^4.23.15",
-    "typescript": "^5.9.3",
-    "vitest": "^5.0.3"
+    "typescript": "^5.9.3"
   }
 }

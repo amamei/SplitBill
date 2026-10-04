@@ -22,3 +22,4 @@ Findings that shape the implementation:
 
 - 2026-10-04 · Vite 8 dev server cannot load modules when the project path contains `#` (`~/workspaces/#hakaton/...`): `#` is treated as a URL fragment ("Failed to load url /src/main.tsx"). `vite build` works. Workaround: `web/scripts/dev.mjs` switches to `vite build --watch` when the path contains `#`, and the API server serves `web/dist` on :8787. Not an A2UI issue, cost ~10 min.
 - 2026-10-04 · npm 12 blocks dependency install scripts by default (`esbuild`, `fsevents`); harmless here — esbuild ships its binary via `@esbuild/<platform>` optional deps.
+- 2026-10-04 · Vitest is Vite-based and fails on the same `#` path ("Cannot find module '/src/…test.ts'"). Server tests use Node's built-in runner instead: `node --import tsx --test` with `node:assert`. Not an A2UI issue.
