@@ -1,9 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import type Anthropic from "@anthropic-ai/sdk";
+import Anthropic from "@anthropic-ai/sdk";
+import type { LlmConfig } from "../../config.js";
 import { dispatchAction } from "../actions.js";
 import { runTurn, STATE_SYNC_PREFIX } from "../runner.js";
 import { action, controlSession } from "./helpers.js";
+
+const ANTHROPIC = { provider: "anthropic", model: "claude-opus-5-5", effort: "medium", fallbacks: true } as const satisfies LlmConfig;
+const OLLAMA = { provider: "ollama", model: "m", baseURL: "http://x" } as const satisfies LlmConfig;
 
 type Params = { messages: Array<{ role: string; content: unknown }> } & Record<string, unknown>;
 
@@ -89,7 +93,7 @@ describe("runTurn", () => {
   it("sends the cached system prompt, streaming and effort", async () => {
     const { session } = controlSession();
     const { client, calls } = stubClient();
-    await runTurn(session, "привет", { client });
+    await runTurn(session, "привет", { client, llm: ANTHROPIC });
     const p = calls[0] as Params & { system: Array<{ cache_control?: unknown }>; stream: boolean; output_config: { effort: string }; tools: Array<{ name: string; eager_input_streaming?: boolean }> };
     assert.deepEqual(p.system[0].cache_control, { type: "ephemeral" });
     assert.equal(p.stream, true);
@@ -97,6 +101,20 @@ describe("runTurn", () => {
     assert.equal(p.tools.find((t) => t.name === "render_surface")!.eager_input_streaming, true);
     assert.equal(p.thinking, undefined);
     assert.equal(p.tool_choice, undefined);
+  });
+
+  it("sends Ollama the plain request: no effort, betas, fallbacks or cache_control", async () => {
+    const { session } = controlSession();
+    const { client, calls } = stubClient();
+    const telemetry = await runTurn(session, "привет", { client, llm: OLLAMA });
+    const p = calls[0] as Params & { system: Array<{ cache_control?: unknown }> };
+    assert.equal(p.model, "m");
+    assert.equal(p.output_config, undefined);
+    assert.equal(p.betas, undefined);
+    assert.equal(p.fallbacks, undefined);
+    assert.equal(p.system[0].cache_control, undefined);
+    assert.equal(p.stream, true);
+    assert.equal(telemetry.model, "m");
   });
 
   it("an API failure drops the turn from history and reports an error event", async () => {
@@ -121,6 +139,31 @@ describe("runTurn", () => {
     assert.equal(session.messages.length, 0);
     assert.match(String(telemetry.error), /boom/);
     assert.equal(errors.length, 1);
+    assert.equal(session.busy, false);
+  });
+
+  it("an unreachable Ollama shows how to start it and rolls the turn back", async () => {
+    const { session } = controlSession();
+    const errors: Array<{ message: string }> = [];
+    session.subscribe((event, data) => event === "error" && errors.push(data as { message: string }));
+    const client = {
+      beta: {
+        messages: {
+          toolRunner(params: Params) {
+            return {
+              params,
+              async *[Symbol.asyncIterator]() {
+                throw new Anthropic.APIConnectionError({ message: "Connection error." });
+              },
+            };
+          },
+        },
+      },
+    } as unknown as Pick<Anthropic, "beta">;
+    await runTurn(session, "привет", { client, llm: OLLAMA });
+    assert.equal(errors.length, 1);
+    assert.match(errors[0].message, /ollama serve/);
+    assert.equal(session.messages.length, 0);
     assert.equal(session.busy, false);
   });
 });

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { config, logConfig } from "../config.js";
 import { createScope } from "../log.js";
 import { dispatchAction } from "../agent/actions.js";
+import { preflightOllama } from "../agent/llm.js";
 import { buildSystemPrompt, promptVersion } from "../agent/prompt.js";
 import { runTurn, type UserContent } from "../agent/runner.js";
 import type { Session } from "../agent/session.js";
@@ -82,7 +83,7 @@ export function createApp(): express.Express {
   });
 
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, model: config.model });
+    res.json({ ok: true, provider: config.llm.provider, model: config.model });
   });
 
   app.get("/api/events", (req, res) => {
@@ -188,6 +189,7 @@ export function createApp(): express.Express {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   logConfig();
+  if (config.llm.provider === "ollama") void preflightOllama(config.llm);
   buildSystemPrompt();
   createApp().listen(config.port, () => {
     logger.info("listening", { port: config.port, webDist: fs.existsSync(webDist) ? webDist : null });
