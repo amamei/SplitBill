@@ -1,5 +1,5 @@
-// Repeats a scenario in fresh sessions against the live model and records TZ §7 numbers
-// ("Надёжность", "Скорость и токены"). Usage:
+// Repeats a scenario in fresh sessions against the live model (the active LLM_PROVIDER:
+// Claude or a local Ollama model) and records TZ §7 numbers ("Надёжность", "Скорость и токены"). Usage:
 //   npm -w server run bench:s1 -- --runs 10            (S1: bill from text)
 //   npm -w server run bench:s1 -- --runs 5 --scenario s5 (S5: "покажи итог" after S1)
 import fs from "node:fs";
@@ -85,8 +85,9 @@ const stats = Object.fromEntries(
 );
 const report = {
   scenario,
+  provider: config.llm.provider,
   model: config.model,
-  effort: config.effort,
+  effort: config.llm.provider === "anthropic" ? config.llm.effort : undefined,
   stream: config.stream,
   runs,
   ok: results.filter((r) => r.ok).length,

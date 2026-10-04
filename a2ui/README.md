@@ -2,13 +2,13 @@
 
 Приложение для дележа счёта из ТЗ хакатона ([`../TZ.md`](../TZ.md)), собранное на **Google A2UI v0.9**: агент (Claude) описывает интерфейс декларативным JSON из базового каталога компонентов, клиент рисует его нативно через `@a2ui/react`. Деньги считает код, модель только вызывает тулы и рисует результат.
 
-- Модель: `claude-opus-5-5` (общая для всех участников, меняется через `ANTHROPIC_MODEL`).
+- Модель: `claude-opus-5-5` (общая для всех участников, меняется через `ANTHROPIC_MODEL`) или локальная модель через Ollama (`LLM_PROVIDER=ollama`, см. [ниже](#локальная-модель-через-ollama)).
 - Стек: тонкий TypeScript — Node + Express + `@anthropic-ai/sdk` (tool runner, стриминг) на сервере, Vite + React 19 + `@a2ui/react@0.12` / `@a2ui/web_core@0.12` на клиенте. ADK/A2A не используются.
 - Отчёт: [`REPORT.md`](REPORT.md). Сценарий демо: [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Запуск одной командой
 
-Нужны Node ≥ 22 и доступ к Anthropic API. Проще всего через CLI `ant`: `brew install anthropics/tap/ant && ant auth login`, проверка — `ant auth status`. Вместо этого можно задать `ANTHROPIC_API_KEY` в `.env`.
+Нужны Node ≥ 22 и доступ к Anthropic API. Проще всего через CLI `ant`: `brew install anthropics/tap/ant && ant auth login`, проверка — `ant auth status`. Вместо этого можно задать `ANTHROPIC_API_KEY` в `.env`. Без доступа к Anthropic — локальная модель, см. «Локальная модель через Ollama».
 
 ```bash
 cd a2ui
@@ -20,6 +20,70 @@ npm install && npm run dev
 
 - обычно это Vite dev server `http://localhost:5173` (проксирует `/api` на 8787);
 - если в пути к проекту есть `#` (например `~/workspaces/#hakaton/...`), Vite dev server не работает — скрипт сам переключается на `vite build --watch`, а приложение открывается на `http://localhost:8787`.
+
+## Локальная модель через Ollama
+
+Агента можно запустить на локальной модели без ключа Anthropic. Ollama отдаёт Anthropic-совместимый API (`POST /v1/messages`), поэтому сервер использует тот же `@anthropic-ai/sdk`, тот же tool runner и те же тулы — меняется только адрес и модель. По умолчанию по-прежнему Claude.
+
+**1. Что нужно.**
+
+- Ollama ≥ 0.14 (версия с Anthropic-совместимым API); проверено на 0.35.1.
+- Модель с `tools` (обязательно) и `vision` (для загрузки фото чека, S9). Проверка: `ollama show <модель>` → блок Capabilities.
+- Проверено на `qwen3.6:35b-a3b-q4_K_M` (~23 ГБ, Apple Silicon, 100 % GPU): `smoke:s1` — 9/9 PASS, S1 ≈ 3,4 мин (первая поверхность через ~2,5 мин, 1 исправление дерева после валидации, ~11,6 тыс. выходных токенов), S6 ≈ 21 с, только `updateDataModel`. Модель поменьше тоже запустится, но дерево A2UI будет собирать менее надёжно (больше исправлений после валидации).
+
+**2. Установка и модель.**
+
+```bash
+brew install ollama            # или приложение с ollama.com
+ollama pull qwen3.6:35b-a3b-q4_K_M
+```
+
+**3. Окно контекста — поставьте 65536.** Системный промпт занимает ~13 тыс. токенов у Qwen (~21 тыс. у Claude), дерево счёта S1 — ещё до ~10 тыс. выходных, плюс история, результаты тулов и исправления после валидации. С контекстом 32k (так Ollama загрузила модель по умолчанию) smoke-тест прошёл, но впритык; если контекст меньше нужного, начало промпта молча обрезается — модель «забывает» каталог и ломает дерево. Надёжнее 65536:
+
+```bash
+OLLAMA_CONTEXT_LENGTH=65536 ollama serve
+```
+
+Другие способы: ползунок Context length в настройках приложения Ollama; на macOS `launchctl setenv OLLAMA_CONTEXT_LENGTH 65536` и перезапуск приложения; или своя модель через Modelfile с `PARAMETER num_ctx 65536` и `ollama create`. Проверка после первого запроса: `ollama ps` → колонка CONTEXT.
+
+**4. `.env`.** Добавьте в `a2ui/.env`:
+
+```bash
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=qwen3.6:35b-a3b-q4_K_M
+# OLLAMA_BASE_URL=http://localhost:11434
+```
+
+Переменные `ANTHROPIC_*` в этом режиме не используются, ключ не нужен (и на адрес Ollama не отправляется).
+
+**5. Запуск и проверка.**
+
+```bash
+npm run dev
+curl localhost:8787/api/health        # {"ok":true,"provider":"ollama","model":"qwen3.6:35b-a3b-q4_K_M"}
+npm -w server run smoke:s1            # S1 + S6 на локальной модели, таблица PASS/FAIL
+```
+
+В логе сервера при старте: `[config] resolved {… "provider":"ollama" …}`, затем `[agent.llm] ollama ready {capabilities: […]}` — или предупреждение `ollama preflight` с тем, что исправить. Вернуться на Claude: удалить `LLM_PROVIDER` (или `LLM_PROVIDER=anthropic`) и перезапустить сервер.
+
+**Ограничения.**
+
+- Кеш промпта — только локальный KV-кеш Ollama: общий префикс (системный промпт) переиспользуется, пока модель загружена (в телеметрии это `cacheRead`), `cache_control` не нужен. Первый ход после загрузки модели читает промпт целиком, и S1 на ноутбуке всё равно идёт минуты.
+- `ANTHROPIC_EFFORT` и `ANTHROPIC_FALLBACKS` не применяются.
+- Ollama присылает вход тула одним куском, поэтому стриминг S10 показывает дерево целиком, а не по частям.
+- `count:prompt` считает токены через `usage` пробного запроса (у Ollama нет `count_tokens`).
+- Качество дерева, число исправлений и скорость зависят от модели.
+- Это не общая модель ТЗ §3 — её цифры не идут в `REPORT.md`.
+
+**Если что-то не так.**
+
+| Сообщение / симптом | Причина | Что сделать |
+|---|---|---|
+| «Ollama недоступна по http://localhost:11434» | сервер Ollama не запущен | `ollama serve` или запустить приложение |
+| «Модель … не найдена в Ollama. Выполните `ollama pull …`» | модель не скачана или опечатка в `OLLAMA_MODEL` | `ollama pull <модель>`, сверить с `ollama list` |
+| «Модель … не поддерживает инструменты» | у модели нет `tools` | выбрать модель с `tools` в `ollama show` |
+| сервер не стартует: `LLM_PROVIDER=ollama needs OLLAMA_MODEL` | не задана модель | добавить `OLLAMA_MODEL` в `.env` |
+| битое или обрезанное дерево, модель «не знает» компонентов | мало контекста | поднять контекст (шаг 3), проверить `ollama ps` |
 
 ## Интерфейс
 
@@ -86,7 +150,10 @@ SSE /api/events: a2ui | chat | status (токены, задержки, счёт�
 
 | Переменная | По умолчанию | Что делает |
 |---|---|---|
-| `ANTHROPIC_MODEL` | `claude-opus-5-5` | модель агента |
+| `LLM_PROVIDER` | `anthropic` | `ollama` — локальная модель через Ollama (см. «Локальная модель через Ollama») |
+| `OLLAMA_MODEL` | — | модель Ollama, обязательна при `LLM_PROVIDER=ollama` (например `qwen3.6:35b-a3b-q4_K_M`) |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | адрес сервера Ollama |
+| `ANTHROPIC_MODEL` | `claude-opus-5-5` | модель агента (Claude) |
 | `ANTHROPIC_EFFORT` | `medium` | `output_config.effort` (`low`…`max`) |
 | `ANTHROPIC_FALLBACKS` | `default` | серверный fallback при отказе модели; `off` — всегда одна модель |
 | `A2UI_STREAM` | `1` | `0` — дерево приходит целиком после вызова тула |
@@ -104,5 +171,7 @@ npm -w server run bench:s1 -- --runs 10                # S1 ×10: надёжно
 npm -w server run bench:s1 -- --runs 5 --scenario s5   # S5
 npm -w server run count:prompt                         # размер системного промпта в токенах
 ```
+
+`smoke:s1`, `bench:s1` и `count:prompt` работают с активным провайдером (`LLM_PROVIDER`); провайдер и модель печатаются в выводе и пишутся в `bench/*.json`.
 
 `GET /api/log?sessionId=…` отдаёт телеметрию ходов; `GET /api/debug/bill?sessionId=…` — счёт и итог как они лежат на сервере.

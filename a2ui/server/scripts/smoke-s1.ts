@@ -1,9 +1,11 @@
-// S1 + S6 smoke test against the live model (needs Anthropic credentials: `ant auth login`
-// or ANTHROPIC_API_KEY). Usage: npm -w server run smoke:s1
+// S1 + S6 smoke test against the live model of the active LLM_PROVIDER: Claude (needs Anthropic
+// credentials: `ant auth login` or ANTHROPIC_API_KEY) or a local Ollama model (LLM_PROVIDER=ollama).
+// Usage: npm -w server run smoke:s1
 import { Session } from "../src/agent/session.js";
 import { runTurn } from "../src/agent/runner.js";
 import { CONTROL_EXAMPLE_TEXT } from "../src/domain/fixtures/control-example.js";
 import { formatMinor } from "../src/domain/money.js";
+import { config } from "../src/config.js";
 
 process.env.LOG_LEVEL ??= "warn";
 type Check = { check: string; ok: boolean; detail: string };
@@ -40,6 +42,7 @@ expect(
   balances().join(", "),
 );
 
+console.info(`[smoke] provider: ${config.llm.provider}, model: ${config.model}`);
 console.table(checks.map((c) => ({ result: c.ok ? "PASS" : "FAIL", check: c.check, detail: c.detail })));
 console.info(JSON.stringify({ s1: s1, s6: s6 }, null, 1));
 process.exit(checks.every((c) => c.ok) ? 0 : 1);
