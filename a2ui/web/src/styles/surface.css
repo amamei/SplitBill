@@ -1,9 +1,20 @@
-/* A2UI surface styling (scoped under .a2ui-root, the wrapper each surface is rendered into). */
+/*
+ * A2UI surface styling, scoped under .a2ui-root (the wrapper SurfaceFrame puts around each surface).
+ *
+ * @a2ui/react@0.12.0 ships empty CSS-module maps for Button, Text, TextField and ChoicePicker, so
+ * those render without classes; the --a2ui-button-*, --a2ui-textfield-*, --a2ui-choicepicker-* and
+ * --a2ui-text-* variables do nothing. Hooks that do work: the --a2ui-* tokens read by inline styles
+ * (card, row/column/list gaps, checkbox, tabs, divider), .a2ui-card, .a2ui-tabs-*, button.chip,
+ * Text wrappers (div.h1..h5 > hN, div.body, span > em for captions) and Row/List inline styles
+ * (matched with [style*=…]; overriding them needs !important). Button variants get classes from
+ * our Button implementation (a2ui/catalog.ts).
+ */
 
 .a2ui-root {
+  /* renderer tokens → app tokens */
   --a2ui-color-primary: var(--accent);
   --a2ui-color-primary-hover: var(--accent-hover);
-  --a2ui-color-on-primary: var(--panel);
+  --a2ui-color-on-primary: var(--on-accent);
   --a2ui-color-surface: var(--panel);
   --a2ui-color-on-surface: var(--page-fg);
   --a2ui-color-background: var(--page-bg);
@@ -11,19 +22,42 @@
   --a2ui-color-border: var(--line);
   --a2ui-color-input: var(--panel);
   --a2ui-color-on-input: var(--page-fg);
-  --a2ui-border-radius: 8px;
+  --a2ui-border-radius: var(--radius-s);
+  --a2ui-spacing-xs: var(--space-1);
+  --a2ui-spacing-s: var(--space-2);
+  --a2ui-spacing-m: var(--space-3);
+  --a2ui-spacing-l: var(--space-4);
+  --a2ui-spacing-xl: var(--space-5);
+  --a2ui-font-size-s: var(--font-size-s);
+  --a2ui-font-size-m: var(--font-size-m);
+  --a2ui-row-gap: var(--space-2);
+  --a2ui-column-gap: var(--space-2);
+  --a2ui-list-gap: var(--space-1);
   --a2ui-card-background: var(--panel);
   --a2ui-card-border: 1px solid var(--line);
-  --a2ui-card-border-radius: 12px;
-  --a2ui-card-box-shadow: none;
-  --a2ui-card-padding: 14px;
-  --a2ui-card-margin: 0 0 12px 0;
-  --a2ui-text-caption-color: var(--muted);
+  --a2ui-card-border-radius: var(--radius-l);
+  --a2ui-card-box-shadow: var(--shadow-1);
+  --a2ui-card-padding: var(--space-4);
+  --a2ui-card-margin: 0 0 var(--space-4) 0;
   --a2ui-checkbox-margin: 2px 0;
+  --a2ui-checkbox-size: 18px;
   --a2ui-checkbox-label-font-weight: 500;
+  --a2ui-checkbox-label-font-size: var(--font-size-s);
+  --a2ui-divider-spacing: var(--space-3);
+  --a2ui-tabs-border: 1px solid var(--line);
+  --a2ui-tabs-header-background: transparent;
+  --a2ui-tabs-header-color: var(--muted);
+  --a2ui-tabs-header-background-active: transparent;
+  --a2ui-tabs-header-color-active: var(--accent);
+  --a2ui-label-font-size: var(--font-size-xs);
+
+  container-type: inline-size;
   color: var(--page-fg);
-  margin-bottom: 16px;
+  font-size: var(--font-size-s);
+  font-variant-numeric: tabular-nums;
 }
+
+/* ---------- typography ---------- */
 
 .a2ui-root p,
 .a2ui-root h1,
@@ -33,49 +67,196 @@
 .a2ui-root h5 {
   margin: 0;
 }
-.a2ui-root h1 { font-size: 1.5rem; }
-.a2ui-root h2 { font-size: 1.25rem; }
-.a2ui-root h3 { font-size: 1.1rem; }
-.a2ui-root h4 { font-size: 1rem; }
+.a2ui-root h1 { font-size: var(--font-size-xl); letter-spacing: -0.015em; }
+.a2ui-root h2 { font-size: 1.25rem; letter-spacing: -0.01em; }
+.a2ui-root h3 { font-size: var(--font-size-l); letter-spacing: -0.005em; }
+.a2ui-root h4 { font-size: var(--font-size-m); }
+.a2ui-root h5 { font-size: var(--font-size-s); color: var(--muted); }
+.a2ui-root .body p { line-height: 1.45; }
+.a2ui-root .body p + p { margin-top: var(--space-2); }
+.a2ui-root .body a { color: var(--accent); }
+.a2ui-root .body code { font-family: var(--font-mono); font-size: 0.9em; padding: 1px 4px; border-radius: 4px; background: var(--panel-2); }
 
-.a2ui-root button {
-  font: inherit;
-  font-size: 0.9rem;
-  padding: 6px 12px;
-  border-radius: var(--a2ui-border-radius);
-  border: 1px solid var(--line);
+/* Card title: the first heading of a card. */
+.a2ui-card > :is(.h2, .h3, .h4):first-child > :is(h2, h3, h4),
+.a2ui-card > * > :is(.h2, .h3, .h4):first-child > :is(h2, h3, h4) {
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--line);
+}
+
+/* A Card inside a Card is a sub-panel; in a Row it is usually a bar (S7 charts built from Card weights). */
+.a2ui-card .a2ui-card {
+  background: var(--accent-soft) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+.a2ui-card div[style*="flex-direction: row"] > .a2ui-card {
+  background: var(--accent) !important;
+  min-height: 22px;
+  border-radius: var(--radius-s) !important;
+}
+
+/* Caption variant renders as span > em: muted, upright, small. */
+.a2ui-root span > em {
+  font-style: normal;
+  font-size: var(--font-size-xs);
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+/* ---------- buttons ---------- */
+
+.a2ui-root button:not(.chip):not(.a2ui-tab-button):not(.a2ui-modal-close) {
+  font-size: var(--font-size-s);
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line-strong);
   background: var(--panel);
   color: var(--page-fg);
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 120ms, border-color 120ms, color 120ms, transform 60ms;
 }
-.a2ui-root button:hover { border-color: var(--accent); }
+.a2ui-root button:not(.chip):not(.a2ui-tab-button):not(.a2ui-modal-close):hover:not(:disabled) { border-color: var(--accent); }
+.a2ui-root button:not(.chip):not(.a2ui-tab-button):not(.a2ui-modal-close):active:not(:disabled) { transform: translateY(1px); }
 .a2ui-root button:disabled { opacity: 0.5; cursor: default; }
 .a2ui-root button p { margin: 0; }
 
-.a2ui-root input:not([type="checkbox"]),
+/* Variant classes come from VariantButton (a2ui/catalog.ts). */
+.a2ui-root button.a2ui-btn--primary {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--on-accent) !important;
+  font-weight: 600;
+}
+.a2ui-root button.a2ui-btn--primary:hover:not(:disabled) { background: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }
+.a2ui-root button.a2ui-btn--borderless {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--accent) !important;
+  padding: 0 var(--space-2) !important;
+}
+.a2ui-root button.a2ui-btn--borderless:hover:not(:disabled) { background: var(--accent-soft) !important; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ChoicePicker chips and Tabs. */
+.a2ui-root button.chip {
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--panel);
+  color: var(--page-fg);
+  cursor: pointer;
+}
+.a2ui-root button.chip.selected,
+.a2ui-root button.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.a2ui-root .a2ui-tab-button { border: 0 !important; border-bottom: 2px solid transparent !important; padding: var(--space-2) var(--space-3) !important; font-weight: 600; cursor: pointer; }
+.a2ui-root .a2ui-tab-button.active { border-bottom-color: var(--accent) !important; }
+
+/* ---------- inputs ---------- */
+
+.a2ui-root input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 .a2ui-root textarea,
 .a2ui-root select {
-  font: inherit;
-  font-size: 0.9rem;
-  padding: 6px 8px;
-  border-radius: var(--a2ui-border-radius);
-  border: 1px solid var(--line);
+  font-size: var(--font-size-s);
+  min-height: 34px;
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line-strong);
   background: var(--panel);
   color: var(--page-fg);
   min-width: 0;
   width: 100%;
-  box-sizing: border-box;
+  transition: border-color 120ms;
 }
+.a2ui-root input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):hover,
+.a2ui-root textarea:hover { border-color: var(--muted); }
+.a2ui-root input::placeholder,
+.a2ui-root textarea::placeholder { color: var(--muted); opacity: 0.8; }
 .a2ui-root input:focus,
-.a2ui-root textarea:focus {
+.a2ui-root textarea:focus,
+.a2ui-root select:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
+  border-color: transparent;
 }
-.a2ui-root label {
+.a2ui-root input:invalid,
+.a2ui-root [aria-invalid="true"] { border-color: var(--danger) !important; }
+.a2ui-root input[type="checkbox"],
+.a2ui-root input[type="radio"] { accent-color: var(--accent); }
+.a2ui-root input[type="range"] { accent-color: var(--accent); width: 100%; }
+
+/* TextField label (div > label + input); checkbox/radio labels keep their inline layout. */
+.a2ui-root label:has(+ input:not([type="checkbox"]):not([type="radio"]):not([type="range"])),
+.a2ui-root label:has(+ textarea) {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
   color: var(--muted);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
+/* ---------- lists and rows ---------- */
+
+/* Rows rendered from List templates: hover band so a line reads as one item. */
+.a2ui-root div[style*="flex-direction: column"] > div[style*="flex-direction: row"] {
+  border-radius: var(--radius-s);
+  transition: background-color 120ms;
+}
+.a2ui-card div[style*="flex-direction: column"] > div[style*="flex-direction: row"]:has(> button):hover { background: var(--panel-2); }
+
+/* Text children in rows ellipsize instead of pushing buttons out. */
+.a2ui-root div[style*="flex-direction: row"] > .body p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Narrow surfaces (phones, or the bill beside the chat on a small laptop): let rows wrap. */
+@container (max-width: 640px) {
+  .a2ui-root div[style*="flex-direction: row"] {
+    flex-wrap: wrap !important;
+    row-gap: var(--space-2) !important;
+  }
+  .a2ui-root div[style*="flex-direction: row"] > [style*="flex:"]:not(.a2ui-card) {
+    min-width: min(100%, 6.5rem) !important;
+  }
+  /* Bar rows (label · Card bar · value) keep proportions: no wrapping, no minimum widths. */
+  .a2ui-root div[style*="flex-direction: row"]:has(> .a2ui-card) {
+    flex-wrap: nowrap !important;
+  }
+  .a2ui-root div[style*="flex-direction: row"]:has(> .a2ui-card) > [style*="flex:"] {
+    min-width: 0 !important;
+  }
+  .a2ui-root div[style*="flex-direction: row"] > span[style*="flex:"]:has(> em) {
+    flex-basis: 100% !important;
+  }
+  .a2ui-root div[style*="flex-direction: row"] > .body p {
+    white-space: normal;
+  }
+  .a2ui-root {
+    --a2ui-card-padding: var(--space-3);
+  }
+}
+
+/* ---------- loading placeholder ---------- */
+
+/* @a2ui/react renders "[Loading <id>...]" as a grey div while the tree streams in. */
+.a2ui-root div[style*="color: gray"] {
+  font-size: 0 !important;
+  padding: 0 !important;
+  height: 14px;
+  margin: 6px 0;
+  border-radius: var(--radius-s);
+  background: linear-gradient(90deg, var(--panel-2) 0%, var(--line) 50%, var(--panel-2) 100%);
+  background-size: 200% 100%;
+  animation: skeleton 1.2s ease-in-out infinite;
+}
+.a2ui-root > div[style*="color: gray"]:only-child { height: 120px; border-radius: var(--radius-l); }
+
+@keyframes skeleton {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}

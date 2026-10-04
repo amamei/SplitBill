@@ -2,7 +2,8 @@
 // `feed()` is the only way server envelopes reach the renderer; UI actions fan out to
 // listeners registered with `onAction()` (the API layer posts them to the server).
 import { MessageProcessor, type ActionPayload } from "@a2ui/web_core/v0_9";
-import { basicCatalog, type ReactComponentImplementation } from "@a2ui/react/v0_9";
+import type { ReactComponentImplementation } from "@a2ui/react/v0_9";
+import { appCatalog } from "./catalog";
 
 export type A2uiEnvelope = { version: string } & Record<string, unknown>;
 export type FeedError = { message: string; envelope: A2uiEnvelope };
@@ -12,7 +13,7 @@ type FeedErrorListener = (errors: FeedError[]) => void;
 const actionListeners = new Set<ActionListener>();
 const feedErrorListeners = new Set<FeedErrorListener>();
 
-export const processor = new MessageProcessor<ReactComponentImplementation>([basicCatalog], (action) => {
+export const processor = new MessageProcessor<ReactComponentImplementation>([appCatalog], (action) => {
   console.info("[a2ui.action]", action);
   for (const listener of actionListeners) listener(action);
 });

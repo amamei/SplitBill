@@ -236,7 +236,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
 
 ### Phase 3: Chat UX
 
-- [ ] **T7. Chat: onboarding, smart scroll, typing indicator and accessible composer**
+- [x] **T7. Chat: onboarding, smart scroll, typing indicator and accessible composer**
   - Files: `a2ui/web/src/components/Chat.tsx`, plus a new `a2ui/web/src/lib/scroll.ts` (pure `isNearBottom(scrollTop, clientHeight, scrollHeight, threshold = 48)`) and `shell.css`.
   - Copy and quick prompts (`Chat.tsx:6-13`): keep the exact message texts, which are the TZ scenarios, and change only the labels to "Пример из ТЗ", "Гена курил — правка", "Диаграмма долгов". Show them as chips.
   - Empty state: replace `.chat-hint` with an onboarding card. It has a title "Разделим счёт", one sentence of explanation, the same three example chips, and a hint "Enter — отправить, Shift+Enter — новая строка, / — к полю ввода".
@@ -255,7 +255,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
 
 ### Phase 4: A2UI surface look
 
-- [ ] **T8. Surface stylesheet: cards, typography, inputs, rows and loading skeleton**
+- [x] **T8. Surface stylesheet: cards, typography, inputs, rows and loading skeleton**
   - Rework `a2ui/web/src/styles/surface.css`, keeping everything scoped under `.a2ui-root`.
   - Renderer tokens: map `--a2ui-*` to the T1 tokens. Includes the colour set, `--a2ui-border-radius: var(--radius-s)`, `--a2ui-spacing-*`, `--a2ui-font-size-*`, the card vars (shadow `--shadow-1`, radius `--radius-l`, padding `var(--space-4)`, margin `0 0 var(--space-4)`), the tabs vars and `--a2ui-divider-spacing`. Remove the dead `--a2ui-text-caption-color`.
   - Typography:
@@ -276,7 +276,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
   - Logging: none (CSS only).
   - Done when, in `?spike=1` (all four fixtures) and with the seeded control example, cards, headings, captions, inputs, checkboxes, chips and the skeleton look intentional in both themes; nothing overflows horizontally at 375px; and radio and range inputs are no longer full-width boxes.
 
-- [ ] **T9. Button variant classes (renderer fix for empty CSS modules)**
+- [x] **T9. Button variant classes (renderer fix for empty CSS modules)**
   - Create `a2ui/web/src/a2ui/catalog.ts`.
     - Build `appCatalog = new Catalog(<basic catalogId>, "0.9", components, BASIC_FUNCTIONS, BasicCatalogThemeSchema)`.
     - `components` is the exported basic set (`Text, Image, Icon, Video, AudioPlayer, Row, Column, List, Card, Tabs, Divider, Modal, Button, TextField, CheckBox, ChoicePicker, Slider, DateTimeInput`, in `index.js:1076-1096` order) with `Button` replaced by `VariantButton = createComponentImplementation(ButtonApi, …)`.
