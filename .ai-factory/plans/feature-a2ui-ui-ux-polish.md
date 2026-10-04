@@ -333,7 +333,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
 
 ### Phase 5: Verification and docs
 
-- [ ] **T11. Visual and behavioural QA pass across the combination matrix**
+- [x] **T11. Visual and behavioural QA pass across the combination matrix**
   - Run `A2UI_DEBUG=1 npm run build && A2UI_DEBUG=1 npm -w server start` from `a2ui/`. Open http://localhost:8787 with the Playwright MCP. Seed with `POST /api/debug/seed` using the page's `sessionId` (from `sessionStorage["a2ui-session"]`).
   - Walk every row of the combination table in "Requirements Reconciliation" at 1440×900 and 375×812, in light and dark mode. Also check `?spike=1` (all four fixtures).
   - Click each action once on the seeded bill: add, rename and remove person (including the blocked removal and "Исправить"); add, open, delete and save an item; switch all three split types; change the payer. Check that the summary updates in place with no full redraw (debug drawer: no new `updateComponents`).
@@ -342,7 +342,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
   - Save screenshots to `a2ui/docs/screenshots/` with these names: `desktop-light-bill.png`, `desktop-dark-bill-chart.png`, `mobile-light-chat.png`, `mobile-dark-bill.png`, `debug-drawer.png`. Fix any regressions found in the owning task's files before you tick this task.
   - Logging: confirm that `?debug=1` shows `[ui.*]` debug lines and that a normal load shows only warn and error lines.
 
-- [ ] **T12. Documentation: README, DEMO and REPORT**
+- [x] **T12. Documentation: README, DEMO and REPORT**
   - `a2ui/README.md`: add a "Интерфейс" section covering the panes, mobile tab bar, theme toggle, debug mode (`?debug=1`, Ctrl/Cmd+Shift+D), keyboard shortcuts, and the screenshots from T11.
   - `a2ui/docs/DEMO.md`: update the demo walkthrough. It should say where to click on desktop and on mobile, that the drawer stays closed during the demo and is opened only to show envelopes or latency, and how to use the outline navigation during S5.
   - `a2ui/REPORT.md`:

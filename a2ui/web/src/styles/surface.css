@@ -71,7 +71,7 @@
 .a2ui-root h2 { font-size: 1.25rem; letter-spacing: -0.01em; }
 .a2ui-root h3 { font-size: var(--font-size-l); letter-spacing: -0.005em; }
 .a2ui-root h4 { font-size: var(--font-size-m); }
-.a2ui-root h5 { font-size: var(--font-size-s); color: var(--muted); }
+.a2ui-root h5 { font-size: var(--font-size-s); font-weight: 600; }
 .a2ui-root .body p { line-height: 1.45; }
 .a2ui-root .body p + p { margin-top: var(--space-2); }
 .a2ui-root .body a { color: var(--accent); }
@@ -212,6 +212,12 @@
 .a2ui-root div[style*="flex-direction: row"] > .body p {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* A TextField without "weight" would sit at the input's intrinsic width (~20ch); let it fill the row. */
+.a2ui-root div[style*="flex-direction: row"] > div:not([style]):has(> input:not([type="checkbox"]):not([type="radio"]):not([type="range"])) {
+  flex: 1 1 8rem;
+  min-width: 0;
 }
 
 /* Narrow surfaces (phones, or the bill beside the chat on a small laptop): let rows wrap. */

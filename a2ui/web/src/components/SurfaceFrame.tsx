@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { A2uiSurface, type ReactComponentImplementation } from "@a2ui/react/v0_9";
 import type { SurfaceModel } from "@a2ui/web_core/v0_9";
+import { subscribe } from "../a2ui/api";
 import { debug } from "../lib/log";
 import { safeAccent, surfaceTitle } from "../lib/surfaces";
 
@@ -29,10 +30,35 @@ export function SurfaceFrame({ surface, collapsed, isNew, onToggleCollapsed, onH
     if (!isNew || !frameRef.current) return;
     debug("nav", "new surface", { surfaceId: surface.id });
     const el = frameRef.current;
-    el.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
+    const align = () => el.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
+    align();
     el.classList.add("is-flashing");
     const t = setTimeout(() => el.classList.remove("is-flashing"), 1200);
-    return () => clearTimeout(t);
+    // The surface is created empty and streams in: the first scroll stops at the page bottom.
+    // Keep re-aligning while it grows — until the agent's turn ends (max 20 s) or the reader
+    // scrolls/types.
+    let follow = true;
+    const stop = () => (follow = false);
+    const ro = new ResizeObserver(() => follow && align());
+    ro.observe(el);
+    const settle = setTimeout(stop, 20_000);
+    const unsubscribe = subscribe((e) => {
+      if (e.kind !== "activity" || e.activity.agentBusy || !follow) return;
+      requestAnimationFrame(align);
+      stop();
+    });
+    addEventListener("wheel", stop, { passive: true });
+    addEventListener("touchstart", stop, { passive: true });
+    addEventListener("keydown", stop);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(settle);
+      ro.disconnect();
+      unsubscribe();
+      removeEventListener("wheel", stop);
+      removeEventListener("touchstart", stop);
+      removeEventListener("keydown", stop);
+    };
   }, [isNew, surface.id]);
 
   const style = accent ? ({ "--surface-accent": accent } as CSSProperties) : undefined;

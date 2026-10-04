@@ -13,6 +13,8 @@ type Surface = SurfaceModel<ReactComponentImplementation>;
 
 /** Surfaces created this soon after mount are SSE replays after a reload: no scroll/flash. */
 const REPLAY_WINDOW_MS = 1500;
+/** Viewport y below the sticky header + surface nav; a frame whose top is above it is "current". */
+const CURRENT_LINE_PX = 160;
 
 const toggle = (set: Set<string>, id: string) => {
   const next = new Set(set);
@@ -69,20 +71,29 @@ export function Surfaces() {
   const visible = ordered.filter((s) => !hidden.has(s.id));
   const current = visible.find((s) => s.id === currentId) ?? visible[0];
 
-  // Follow the reader: the frame nearest the top of the viewport becomes current.
+  // Follow the reader: the last frame whose top has passed the sticky bars is current;
+  // at the page bottom the last frame is (it may never reach the top).
   useEffect(() => {
     const root = listRef.current;
     if (!root || visible.length < 2) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        const id = (top?.target as HTMLElement | undefined)?.dataset.surfaceId;
-        if (id) setCurrentId(id);
-      },
-      { rootMargin: "-130px 0px -60% 0px" },
-    );
-    root.querySelectorAll(".surface-frame").forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    const frames = [...root.querySelectorAll<HTMLElement>(".surface-frame")];
+    let raf = 0;
+    const pick = () => {
+      raf = 0;
+      const atBottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+      const passed = frames.filter((el) => el.getBoundingClientRect().top <= CURRENT_LINE_PX);
+      const el = atBottom ? frames.at(-1) : (passed.at(-1) ?? frames[0]);
+      const id = el?.dataset.surfaceId;
+      if (id) setCurrentId((prev) => (prev === id ? prev : id));
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(pick);
+    };
+    addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener("scroll", onScroll);
+    };
   }, [visible.map((s) => s.id).join("|")]);
 
   const outline = useOutline(current && !collapsed.has(current.id) ? (bodies[current.id] ?? null) : null, current?.id);

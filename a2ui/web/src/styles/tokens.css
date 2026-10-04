@@ -26,7 +26,7 @@
   --shadow-1: 0 1px 2px rgb(29 27 24 / 6%), 0 1px 3px rgb(29 27 24 / 5%);
   --shadow-2: 0 8px 28px rgb(29 27 24 / 14%), 0 2px 6px rgb(29 27 24 / 8%);
   --scrim: rgb(29 27 24 / 32%);
-  --header-glass: rgb(244 242 238 / 82%);
+  --header-glass: rgb(244 242 238 / 94%);
 
   /* spacing, radii, type */
   --space-1: 4px;
@@ -76,7 +76,7 @@
     --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
     --shadow-2: 0 10px 30px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
     --scrim: rgb(0 0 0 / 50%);
-    --header-glass: rgb(21 20 19 / 82%);
+    --header-glass: rgb(21 20 19 / 94%);
   }
 }
 
@@ -100,7 +100,7 @@
   --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
   --shadow-2: 0 10px 30px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
   --scrim: rgb(0 0 0 / 50%);
-  --header-glass: rgb(21 20 19 / 82%);
+  --header-glass: rgb(21 20 19 / 94%);
   color-scheme: dark;
 }
 

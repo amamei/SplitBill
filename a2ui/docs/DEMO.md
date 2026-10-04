@@ -4,14 +4,15 @@ Setup before the demo:
 
 1. `ant auth status` shows an active profile (or `ANTHROPIC_API_KEY` is set in `a2ui/.env`).
 2. `cd a2ui && npm run dev`, open the URL the web process prints (`http://localhost:8787` when the path contains `#`, otherwise the Vite URL).
-3. Open the **message log** drawer at the bottom: it is the on-screen evidence for TZ §7.
+3. Open the page once with `?debug=1` so the **Отладка** button appears in the header (remembered per browser). Keep the drawer **closed** during the demo — it collects turns and envelopes anyway — and open it (button or Ctrl/⌘+Shift+D, Esc closes) only when showing the TZ §7 evidence: per-turn latency/tokens and the raw A2UI stream.
 4. Fresh session: open the page in a new tab (the session id lives in `sessionStorage`).
+5. Navigation during the demo: on desktop use the sticky outline above the bill («Участники · Позиции · Редактор позиции · Итог») to jump between sections and the surface chips («Счёт», «Диаграмма 1») to switch surfaces. On a phone-sized window the bottom tabs switch «Чат / Счёт»; a dot marks the tab with updates. Screenshots: `docs/screenshots/`.
 
 Money is entered in lei (major units); the server stores integer bani. All values below are what the UI must show.
 
 ## S1 — bill from text
 
-Click **S1 контрольный пример** (or paste the text):
+Click **Пример из ТЗ** in the chat (or paste the text):
 
 > Были Аня, Боря, Вика, Гена. Еда 1200 — платил Боря, поровну на всех. Кальяны 800 — платила Аня, доли: Аня 2, Боря 1, Вика 1. Вино 600 — платила Аня, суммы: Аня 250, Боря 250, Вика 100. Чаевые 260 — платила Вика, поровну на всех.
 
@@ -32,7 +33,7 @@ Log: turn row with `create 1`, `components ≥ 1`, first-A2UI ms, output tokens 
 - Type «Дима» in "Новый участник" → **Добавить**: Дима appears with 0.00 / 0.00 / 0.00, no item changes (rule 5).
 - Edit Боря → «Борис» → **Переименовать**: item payer and split texts update.
 - **Удалить** Гена → error block: «Нельзя удалить участника «Гена»: он участвует в позициях «Еда», «Чаевые»» with an **Исправить** button per item. **Исправить** on Еда opens it in the editor.
-- Log: each click is a `UI: <action>` row with only `dataModel` counts, ~1 ms, 0 tokens → no model round trip (TZ §7 "Интерактивность").
+- Debug drawer: each click is a `UI: <action>` row with only `dataModel` counts, ~1 ms, 0 tokens → no model round trip (TZ §7 "Интерактивность").
 
 ## S3 — items through the UI
 
@@ -51,12 +52,12 @@ Log: turn row with `create 1`, `components ≥ 1`, first-A2UI ms, output tokens 
 ## S5 — payers and summary
 
 - In the editor the payer buttons show ● on the current payer; click another → payer, balances and transfers update instantly.
-- The summary card shows share, paid, balance per person and «кто → кому → сколько».
+- The summary card shows share, paid, balance per person and «кто → кому → сколько». Jump to it with **Итог** in the outline.
 - For the S5 speed/token number ask in chat «Покажи итог» (bench: `npm -w server run bench:s1 -- --runs 5 --scenario s5`).
 
 ## S6 — words on top of the existing UI
 
-Reset (new tab + S1), then click **S6 Гена курил** («Гена тоже курил, одна доля»).
+Reset (new tab + S1), then click **Гена курил — правка** («Гена тоже курил, одна доля»).
 
 | | Должен | Заплатил | Баланс |
 |---|---|---|---|
@@ -69,7 +70,7 @@ Reset (new tab + S1), then click **S6 Гена курил** («Гена тоже
 
 ## S7 — unplanned request
 
-Click **S7 диаграмма** («Покажи диаграммой, кто сколько потратил»). There is no chart component in the basic catalog; expect the model to build a new surface (`chart-1`, …) from Rows/Cards with `weight` bars or a table. Record what it did without code changes (TZ §7 "Незапланированное").
+Click **Диаграмма долгов** («Покажи диаграммой, кто сколько потратил»). There is no chart component in the basic catalog; expect the model to build a new surface (`chart-1`, …) from Rows/Cards with `weight` bars or a table. The new surface scrolls into view, flashes once and gets a chip in the switcher; «Свернуть» / «Скрыть» are local. Record what it did without code changes (TZ §7 "Незапланированное").
 
 ## S8 — action from the UI back to the agent
 
@@ -81,7 +82,7 @@ Click **Напомнить** next to Вика (if the model put it in the layout
 
 ## S10 — streaming
 
-Visible during S1: the surface skeleton appears before the model finishes the tool call. Compare with `A2UI_STREAM=0` in `.env` (the whole tree arrives at once). The log's "1-й A2UI, мс" column is the time to the first `createSurface`.
+Visible during S1: the surface skeleton (shimmer placeholders) appears before the model finishes the tool call; the header activity bar and the typing dots run until the turn ends. Compare with `A2UI_STREAM=0` in `.env` (the whole tree arrives at once). The log's "1-й A2UI, мс" column is the time to the first `createSurface`.
 
 ## Measurements for REPORT.md
 
