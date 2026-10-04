@@ -7,9 +7,11 @@
     "dev": "tsx watch src/http/server.ts",
     "start": "tsx src/http/server.ts",
     "test": "LOG_LEVEL=error node --import tsx --test \"src/**/__tests__/*.test.ts\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",
     "build": "tsc -p tsconfig.json",
-    "count:prompt": "tsx scripts/count-prompt-tokens.ts"
+    "count:prompt": "tsx scripts/count-prompt-tokens.ts",
+    "smoke:s1": "tsx scripts/smoke-s1.ts",
+    "bench:s1": "tsx scripts/bench-s1.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

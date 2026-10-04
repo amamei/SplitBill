@@ -79,7 +79,7 @@ export class BillStore {
     const refs = this.referencesTo(bill, personId);
     if (refs.length > 0) {
       const titles = [...new Set(refs.map((r) => `«${r.title}»`))].join(", ");
-      throw new DomainError("PERSON_REFERENCED", `Нельзя удалить ${person.name}: участвует в позициях ${titles}`, {
+      throw new DomainError("PERSON_REFERENCED", `Нельзя удалить участника «${person.name}»: он участвует в позициях ${titles}`, {
         personId,
         name: person.name,
         items: refs,

@@ -123,9 +123,52 @@ body {
 
 .surfaces-empty { color: var(--muted); }
 
-.app { max-width: 1280px; margin: 0 auto; padding: 16px; }
-.app-header h1 { font-size: 1.25rem; margin: 0 0 12px; }
-.app-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-@media (max-width: 800px) { .app-main { grid-template-columns: 1fr; } }
+.app { max-width: 1440px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
+.app-header h1 { font-size: 1.15rem; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+.app-main { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.app-spike { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 860px) { .app-main, .app-spike { grid-template-columns: 1fr; } }
+.surfaces { min-width: 0; }
+
+.conn { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.conn-on { background: var(--accent); }
+.conn-off { background: var(--danger); }
+
+.chat { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; max-height: calc(100vh - 120px); box-sizing: border-box; }
+.chat-lines { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 120px; }
+.chat-hint { color: var(--muted); margin: 0; }
+.chat-line { padding: 6px 10px; border-radius: 10px; white-space: pre-wrap; line-height: 1.4; font-size: 0.9rem; max-width: 92%; }
+.chat-user { align-self: flex-end; background: var(--accent); color: var(--panel); }
+.chat-assistant { align-self: flex-start; background: var(--page-bg); }
+.chat-note { align-self: center; color: var(--muted); font-size: 0.8rem; }
+.chat-error { align-self: stretch; color: var(--danger); border: 1px solid var(--danger); }
+.chat-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat button, .log button, .feed-errors button { font: inherit; font-size: 0.8rem; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--page-fg); cursor: pointer; }
+.chat button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.chat button:disabled { opacity: 0.5; cursor: default; }
+.chat-form textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 0.9rem; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--page-fg); resize: vertical; }
+.chat-actions { display: flex; justify-content: space-between; margin-top: 6px; }
+
+.feed-errors { border: 1px solid var(--danger); color: var(--danger); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.feed-errors pre { white-space: pre-wrap; font-size: 12px; margin: 6px 0 0; }
+.feed-errors button { margin-left: 8px; }
+
+.log { margin-top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.log-toggle { border: none !important; background: none !important; font-weight: 600; padding: 4px 0 !important; }
+.log-body { overflow-x: auto; }
+.log-turns { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; margin: 8px 0; }
+.log-turns th, .log-turns td { border-bottom: 1px solid var(--line); padding: 3px 8px; text-align: right; white-space: nowrap; }
+.log-turns th:nth-child(2), .log-turns td:nth-child(2) { text-align: left; }
+.log-envelopes { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow-y: auto; font-size: 12px; }
+.log-envelopes li { display: flex; gap: 8px; align-items: center; padding: 2px 0; border-bottom: 1px solid var(--line); }
+.log-envelopes code { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-bytes { color: var(--muted); }
+.log-error { color: var(--danger); }
+.badge { font-size: 11px; padding: 1px 6px; border-radius: 6px; color: #fff; }
+.badge-createSurface { background: #2f6f5e; }
+.badge-updateComponents { background: #8a5a00; }
+.badge-updateDataModel { background: #3559a8; }
+.badge-deleteSurface { background: #9b2c2c; }
+
 .spike-panel pre { font-size: 12px; background: var(--panel); border: 1px solid var(--line); padding: 8px; overflow: auto; max-height: 360px; }
 .spike-error { color: var(--danger); }

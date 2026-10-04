@@ -298,7 +298,7 @@ Action contract (server dispatch table; the system prompt publishes exactly this
 
 ### Phase 5: Client integration and scenario tooling
 
-- [ ] Task 13: Web app — SSE → processor, actions → server, chat pane, upload, message log (depends on 2, 11)
+- [x] Task 13: Web app — SSE → processor, actions → server, chat pane, upload, message log (depends on 2, 11)
   - `web/src/a2ui/api.ts`: `sessionId` from `sessionStorage` (uuid v4 via `crypto.randomUUID()`); `EventSource('/api/events?sessionId=…')` with handlers per event name; `postChat(text)`, `postAction(action, dataModel)`, `postUpload(file)` (read as base64; `image/jpeg|png`), `getLog()`.
   - `processor.ts` action handler: `postAction({version:"v0.9", action}, processor.getRendererDataModel("v0.9"))` — the data model is attached by us (nothing in `@a2ui/react` or the sample shell does it); on `{forwarded: true}` show a "Агент думает…" indicator.
   - `App.tsx` layout: left column chat (`Chat.tsx`: message list with streamed assistant text, input, Send, "Фото чека" file button, quick buttons with the TZ scenario texts: S1 control-example text, S6 "Гена тоже курил, одна доля", S7 "Покажи диаграммой, кто сколько потратил"); right column `Surfaces` (all surfaces, `bill` first); bottom drawer `MessageLog.tsx`: table of turns from `status` events (tokens, first A2UI ms, total ms, counts of createSurface/updateComponents/updateDataModel/deleteSurface, repairs) plus a raw envelope list with type badges and a copy-JSON button — this is the on-screen evidence for S6 ("patch or full redraw") and S10.
@@ -307,7 +307,7 @@ Action contract (server dispatch table; the system prompt publishes exactly this
   - LOGGING (browser console, prefixed): `[api]` requests with ms, `[a2ui.processor] feed`, `[a2ui.action]`, `[sse] open/close/error`.
   - Files: `a2ui/web/src/a2ui/{api,processor}.ts`, `a2ui/web/src/components/{Chat,MessageLog,Surfaces}.tsx`, `a2ui/web/src/App.tsx`, `a2ui/web/src/a2ui.css`.
 
-- [ ] Task 14: Scenario scripts — S1 smoke/bench against the live model and the manual demo checklist (depends on 11, 12, 13)
+- [x] Task 14: Scenario scripts — S1 smoke/bench against the live model and the manual demo checklist (depends on 11, 12, 13)
   - `server/scripts/smoke-s1.ts` (`npm -w server run smoke:s1`, needs Anthropic credentials — an `ant auth login` profile or `ANTHROPIC_API_KEY`): creates a session, runs the S1 control-example text through `runTurn` with an in-memory sink, then asserts: a `bill` surface was rendered, `validateComponents` passed first time or after ≤3 repairs, `GET /api/debug/bill` summary equals §6 (balances +385/+385/−405/−365, 3 transfers); then runs the S6 text and asserts the turn emitted `updateDataModel ≥ 1` and `updateComponents == 0`, balances +465/+425/−365/−525. Prints a pass/fail table.
   - `server/scripts/bench-s1.ts` (`npm -w server run bench:s1 -- --runs 10`): repeats S1 in fresh sessions, records per run: valid first try (y/n), repairs, components count, output tokens, input tokens (cache read vs write), first-A2UI ms, total ms; writes `a2ui/bench/s1-<timestamp>.json` and prints mean/median — the numbers for TZ §7 "Надёжность" and "Скорость и токены". Run the S5 summary screen variant with `--scenario s5` (user asks "покажи итог") for the S5 measurement.
   - Manual demo checklist `a2ui/docs/DEMO.md`: step-by-step S1–S9 using the control example with expected on-screen values, which panel proves which §7 criterion, and the fixture for S9 (`photo_2026-10-04_18-36-09.jpg`, METRO receipt, SUMA 723.67).
@@ -316,7 +316,7 @@ Action contract (server dispatch table; the system prompt publishes exactly this
 
 ### Phase 6: Deliverables (TZ §8)
 
-- [ ] Task 15: README and REPORT skeleton (depends on 13, 14)
+- [x] Task 15: README and REPORT skeleton (depends on 13, 14)
   - `a2ui/README.md`: what this is (participant #2, A2UI v0.9, Claude via thin TS stack), prerequisites (Node ≥ 22; Anthropic credentials via `brew install anthropics/tap/ant && ant auth login` — or `ANTHROPIC_API_KEY` as the alternative; check with `ant auth status`), one-command run (`cp .env.example .env && npm install && npm run dev`, open the Vite URL), architecture diagram from this plan, how the three message types map to S1/S6, how UI actions bypass the model, env knobs (`ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `A2UI_STREAM`, `LOG_LEVEL`), test/bench commands, link to `docs/DEMO.md`.
   - `a2ui/REPORT.md` (TZ §8.3 structure, Russian headings as in TZ): the §7 criteria table with empty score cells and the already-known facts pre-filled in the "обоснование" column (model-authored tree from the catalog; no model round trip for S2–S5; S6 = `updateDataModel` only; no visibility/arith/chart in the catalog; published React renderer CSS-module gap; TS agent SDK is a placeholder; relative-path action context works; nested templates untested), the "Spike log" from task 2, sections "Понравилось / Мешало", "Лог затыков" (seeded with the planning-time findings), and "Вердикт" (empty). Bench numbers are pasted from `bench/` by the human on hackathon day.
   - Docs policy is `yes`: `/aif-implement` must run its documentation checkpoint (`/aif-docs`) at completion; this task provides the content.

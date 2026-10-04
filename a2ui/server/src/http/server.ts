@@ -11,6 +11,9 @@ import { runTurn, type UserContent } from "../agent/runner.js";
 import type { Session } from "../agent/session.js";
 import { TurnRecorder } from "../agent/telemetry.js";
 import { envelopeType } from "../a2ui/envelopes.js";
+import { renderSurface } from "../agent/tools.js";
+import { buildControlExample } from "../domain/fixtures/control-example.js";
+import { REFERENCE_BILL_TREE } from "../debug/reference-tree.js";
 import { sessions } from "./sessions.js";
 import { openEventStream } from "./sse.js";
 
@@ -135,6 +138,18 @@ export function createApp(): express.Express {
     if (!session?.billId) throw new HttpError(404, "NO_BILL", "В этой сессии ещё нет счёта");
     res.json({ bill: session.store.getBill(session.billId), summary: session.store.getSummary(session.billId), viewModel: session.lastVm ?? null });
   });
+
+  if (config.debug) {
+    // Test aid (A2UI_DEBUG=1): control example + hand-written reference tree, no model involved.
+    app.post("/api/debug/seed", (req, res) => {
+      const session = sessions.get(parse(z.object({ sessionId: SessionId }), req.body).sessionId);
+      session.billId = buildControlExample(session.store).billId;
+      session.ui = {};
+      session.modelSeenVersion = 0;
+      renderSurface(session, { surfaceId: "bill", components: REFERENCE_BILL_TREE });
+      res.json({ seeded: true, billId: session.billId });
+    });
+  }
 
   app.use("/api", (_req, _res, next) => next(new HttpError(404, "NOT_FOUND", "Unknown API route")));
 

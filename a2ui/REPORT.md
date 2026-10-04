@@ -1,25 +1,65 @@
 # REPORT — A2UI v0.9 (участник №2)
 
-## Spike log
+Инструмент: Google A2UI, протокол v0.9 (спека v0.9.1, upstream `a2ui-project/a2ui@1444719`), рендерер `@a2ui/react@0.12.0` + `@a2ui/web_core@0.12.0`. Агент: `claude-opus-5-5` через `@anthropic-ai/sdk` (tool runner, стриминг), сервер на TypeScript без ADK/A2A.
 
-Run on 2026-10-04 against `@a2ui/react@0.12.0` + `@a2ui/web_core@0.12.0` (spec v0.9.1, upstream `a2ui-project/a2ui@1444719`), fixtures in `web/src/fixtures/spike.ts`, page `?spike=1`, headless Chromium via Playwright. Feed errors: **0**, console warnings/errors: **0**.
+> Оценки 1–5 ставятся после прогонов на демо. В колонке «обоснование» — то, что известно по коду и проверкам на 2026-10-04. Цифры бенчмарков вставляются из `bench/*.json` (`npm -w server run bench:s1`).
 
-| # | Spike | Result |
+## Сравнение (ТЗ §7)
+
+| Критерий | Оценка | Обоснование |
 |---|---|---|
-| 1 | Single-level `List` template over `/items`, Button context `{"itemId": {"path": "id"}}` | ✅ Renders 3 rows. Click on row 2 → `context: {"itemId": "i2"}`. `sourceComponentId` is the template component id (`item_btn`), shared by all rows — the id in the context is what identifies the row. |
-| 1b | `List` over an empty array | ✅ Renders nothing (no placeholder, no gap). "Visibility through data" works. |
-| 2 | Nested templates `/groups[]` → `rows[]` (relative path `rows` inside the outer template) | ✅ Renders both levels; inner button context `{itemId, personId}` resolves to the inner row (`i2`/`p3`). Works in practice although upstream has no tests for it; the production view model still avoids it (master–detail `/editor`). |
-| 3 | `TextField` / `CheckBox` two-way bound (top-level and inside a template), Button context `{"editor": {"path": "/editor"}}` | ✅ Typed title, toggled checkboxes and an edited amount inside the row template all arrive in `context.editor` as one object. `getRendererDataModel("v0.9")` returns the same values under `surfaces["spike-editor"]` (it includes only surfaces created with `sendDataModel: true`: this one and the upstream `34_child-list-template` example). |
-| 4 | Upstream examples `34_child-list-template.json`, `00_incremental.json` verbatim | ✅ Both render without throwing. |
+| Время до первого экрана | | Первая поверхность A2UI (захардкоженные сообщения) отрисована в рамках задачи 2; затыки по дороге — `#` в пути проекта (Vite, Vitest), не A2UI. Время до S1 с живой моделью: _заполнить_. |
+| Покрытие сценариев | | S1–S6 реализованы: S2–S5 полностью через UI, S6 словами. S7 — только базовый каталог (нет компонента графика), результат зависит от модели. S8 — неизвестные действия уходят агенту. S9 — загрузка фото в модель. S10 — стриминг дерева через `eager_input_streaming`. Прогоны с живой моделью: _заполнить_. |
+| Кто автор UI | | Модель из каталога: дерево `bill` один раз пишет модель из 18 компонентов базового каталога, данные заполняет код. Своих компонентов и функций нет. Эталонное дерево в `server/src/debug/reference-tree.ts` написано руками только для тестов (`A2UI_DEBUG=1`) и в демо не участвует. |
+| Интерактивность | | Действие кнопки → `action` с контекстом (относительные пути внутри шаблонов работают) → сервер вызывает домен → `updateDataModel`. Круга через модель нет: ~1 мс на сервере, 0 токенов (лог сообщений). Неизвестные действия (remind) уходят агенту. Состояние из полей ввода попадает на сервер только с действием, в контексте кнопки. |
+| Формы и валидация | | Смена полей под способ деления — данными: заполнен только активный список (`equalRows` / `exactRows` / `sharesRows`), условной видимости в v0.9 нет. Ошибка тула показывается в UI («Не распределено 10.00» + текст ошибки), введённое значение не стирается. Блок ошибки удаления участника с кнопками «Исправить». |
+| Обновление на месте | | S6 = только `updateDataModel` с изменёнными путями (`/items`, `/summary`, поля `/editor`), без `updateComponents`; видно в логе сообщений. Проверено тестами без модели; на живой модели: _заполнить_ (smoke S6). |
+| Незапланированное | | Графика в каталоге нет; промпт подсказывает полосы через `Row` + `weight`. Результат S7: _заполнить_. |
+| Надёжность | | Каждое дерево проверяется по JSON Schema каталога и топологии (root, ссылки, сироты); ошибки уходят модели на исправление (до 3 попыток), поверхность после неудачного стриминга удаляется. Доля битых рендеров на 10 прогонах S1: _заполнить_ (`bench:s1`). |
+| Скорость и токены | | Системный промпт ≈ 51 тыс. символов (схема каталога ~29 КБ), кешируется. Время до первого `createSurface`, выходные токены S1 и S5: _заполнить_ (`bench:s1`, `--scenario s5`). |
+| Контроль внешнего вида | | Только CSS: React-рендерер не применяет `createSurface.theme`, а в опубликованном 0.12.0 карты CSS-модулей Button/Text/TextField/ChoicePicker пустые (классов нет). Стилизация — селекторами элементов под своей обёрткой и переменными `--a2ui-*`. `variant: "primary"` у кнопки не отличим в CSS. Своя дизайн-система — через свой каталог/рендерер, не через тему. |
+| Где запускается | | Свой сайт (React). Рендереры есть для Lit, Angular, React, Flutter (GenUI SDK), то есть возможен и мобильный клиент. Чат-хостов (Claude / ChatGPT / VS Code), которые рисуют A2UI сами, в нашей связке нет. |
+| Зрелость | | Протокол v0.9.1 в продакшене, v1.0 — RC в том же репо (другой формат: `@path`/`@call`, легко перепутать). TS-агентский SDK `@a2ui/agent@0.0.1` — заглушка: промпт, валидация и потоковый разбор написаны свои по образцу Python SDK. CSS-модули в npm-сборке React пустые. Вложенные шаблоны работают, но не покрыты тестами upstream. |
+| DX с AI-ассистентом | | Ассистент собрал всё по исходникам и спеке (клон репо + `npm view`), не галлюцинируя API; несоответствия (пустые CSS-карты, `getSurfaces()` вместо `model.surfacesMap`, отсутствие обёртки у `A2uiSurface`) найдены чтением собранных пакетов. _Дополнить впечатлениями._ |
 
-Findings that shape the implementation:
+## Понравилось
 
-- **Published React renderer has empty CSS-module maps** for Button, Text, TextField, ChoicePicker (`var Button_default = {}` in `v0_9/index.js`), so those elements render without classes; Row/Column/List/Card/CheckBox use inline styles driven by `--a2ui-*` variables. Styled with element selectors under our own `.a2ui-root` wrapper (`web/src/a2ui.css`). `A2uiSurface` renders no wrapper element of its own, and the React renderer ignores `createSurface.theme`.
-- **`Text` goes through the Markdown pipeline** (`@a2ui/markdown-it`) unless `variant` is a heading/caption: a string starting with `- ` or `1. ` becomes a list (visible in the upstream example: "Qty:" rendered as a bullet). Preformatted strings from the projector must avoid Markdown syntax at the start of a line.
-- `MessageProcessor.processMessages` throws on the first invalid message; `feed()` applies envelopes one by one so one bad envelope does not drop the batch, and skips a repeated `createSurface` for a live surface (SSE replay).
+1. _заполнить_
+2. _заполнить_
+3. _заполнить_
+
+## Мешало
+
+1. _заполнить_
+2. _заполнить_
+3. _заполнить_
 
 ## Лог затыков
 
-- 2026-10-04 · Vite 8 dev server cannot load modules when the project path contains `#` (`~/workspaces/#hakaton/...`): `#` is treated as a URL fragment ("Failed to load url /src/main.tsx"). `vite build` works. Workaround: `web/scripts/dev.mjs` switches to `vite build --watch` when the path contains `#`, and the API server serves `web/dist` on :8787. Not an A2UI issue, cost ~10 min.
-- 2026-10-04 · npm 12 blocks dependency install scripts by default (`esbuild`, `fsevents`); harmless here — esbuild ships its binary via `@esbuild/<platform>` optional deps.
-- 2026-10-04 · Vitest is Vite-based and fails on the same `#` path ("Cannot find module '/src/…test.ts'"). Server tests use Node's built-in runner instead: `node --import tsx --test` with `node:assert`. Not an A2UI issue.
+- 2026-10-04 · Vite 8 dev server не грузит модули, если в пути проекта есть `#` (`~/workspaces/#hakaton/...`): `#` считается фрагментом URL («Failed to load url /src/main.tsx»). `vite build` работает. Обход: `web/scripts/dev.mjs` при `#` в пути запускает `vite build --watch`, а сервер API отдаёт `web/dist` на :8787. Не проблема A2UI, ~10 мин.
+- 2026-10-04 · npm 12 по умолчанию блокирует install-скрипты зависимостей (`esbuild`, `fsevents`); здесь безвредно — бинарь esbuild приходит пакетом `@esbuild/<platform>`.
+- 2026-10-04 · Vitest основан на Vite и падает на том же `#` («Cannot find module '/src/…test.ts'»). Серверные тесты переведены на встроенный раннер Node: `node --import tsx --test` + `node:assert`. Не проблема A2UI.
+- 2026-10-04 · `@a2ui/react@0.12.0` в npm: пустые карты CSS-модулей у Button/Text/TextField/ChoicePicker, `A2uiSurface` без собственной обёртки, `createSurface.theme` игнорируется. Обход — свой CSS под `.a2ui-root`.
+- 2026-10-04 · `Text` без варианта заголовка рендерится через Markdown: строка с `- ` или `1. ` в начале превращается в список. Проектор не генерирует такие строки; правило есть в системном промпте.
+- 2026-10-04 · В плане фигурировал `processor.model.surfacesMap`; в 0.12.0 публичный API — `getSurfaces()` / `getSurface(id)` / `onSurfaceCreated` / `onSurfaceDeleted`.
+- 2026-10-04 · TS-агентский SDK `@a2ui/agent@0.0.1` — заглушка; системный промпт (блок схемы как в Python SDK), валидатор (ajv 2020 + проверки топологии) и потоковый разбор входа `render_surface` написаны свои.
+- 2026-10-04 · Anthropic SDK: «нет учётных данных» и «не разобран JSON входа тула» приходят как один и тот же `AnthropicError` (не `APIError`); различаем по сообщению и `cause`, чтобы ретраить только второй случай.
+- 2026-10-04 · Реализация шла без доступа к API (`ant auth login` не выполнен), поэтому всё, что не требует модели, проверено тестами (122) и в браузере через `A2UI_DEBUG=1` + эталонное дерево. Прогоны S1/S6/S7 на живой модели — _заполнить_.
+
+## Spike log
+
+Прогон 2026-10-04: `@a2ui/react@0.12.0` + `@a2ui/web_core@0.12.0`, фикстуры в `web/src/fixtures/spike.ts`, страница `?spike=1`, headless Chromium через Playwright. Ошибок `feed`: **0**, предупреждений и ошибок в консоли: **0**.
+
+| # | Спайк | Результат |
+|---|---|---|
+| 1 | Одноуровневый шаблон `List` над `/items`, контекст кнопки `{"itemId": {"path": "id"}}` | ✅ 3 строки; клик по второй → `context: {"itemId": "i2"}`. `sourceComponentId` — id шаблонного компонента (`item_btn`), общий для всех строк; строку определяет id в контексте. |
+| 1b | `List` над пустым массивом | ✅ Ничего не рисуется (ни заглушки, ни отступа). «Видимость через данные» работает. |
+| 2 | Вложенные шаблоны `/groups[]` → `rows[]` (относительный путь `rows` во внешнем шаблоне) | ✅ Оба уровня рисуются; контекст внутренней кнопки `{itemId, personId}` берётся из внутренней строки (`i2`/`p3`). Работает, хотя upstream это не тестирует; рабочая модель данных всё равно обходится без вложенности (master–detail `/editor`). |
+| 3 | `TextField` / `CheckBox` с двусторонней привязкой (вне и внутри шаблона), контекст кнопки `{"editor": {"path": "/editor"}}` | ✅ Введённый заголовок, переключённые флажки и сумма в строке шаблона приходят в `context.editor` одним объектом. `getRendererDataModel("v0.9")` отдаёт то же самое (только для поверхностей с `sendDataModel: true`). |
+| 4 | Upstream-примеры `34_child-list-template.json`, `00_incremental.json` без изменений | ✅ Оба рисуются без исключений. |
+| 5 | Потоковая сборка: `root` ссылается на детей, которые приходят следующими `updateComponents` | ✅ `MessageProcessor` принимает частичное дерево (проверено напрямую на `@a2ui/web_core`), это основа S10. |
+| 6 | Полный цикл UI без модели (`A2UI_DEBUG=1`, эталонное дерево): S2 удаление Гены → блок ошибки → «Исправить», S4 exact 590/600 → «Не распределено 10.00», S5 смена плательщика, перезагрузка страницы | ✅ Цифры совпадают с ТЗ §6; каждое действие — только `updateDataModel` (2–3 сообщения, ~1 мс); после перезагрузки поверхность восстанавливается из повтора лога сообщений. |
+
+## Вердикт
+
+_заполнить после демо: для каких задач взял бы, для каких нет._

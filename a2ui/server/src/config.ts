@@ -26,6 +26,8 @@ export const config = {
   /** Server-side refusal fallback (`fallbacks: "default"`); ANTHROPIC_FALLBACKS=off keeps every turn on one model. */
   fallbacks: (process.env.ANTHROPIC_FALLBACKS ?? "default") !== "off",
   logLevel: process.env.LOG_LEVEL || "info",
+  /** Enables /api/debug/seed (hand-written reference UI, for testing without the model). */
+  debug: process.env.A2UI_DEBUG === "1",
   envFile: envLoaded ? envPath : null,
 };
 
