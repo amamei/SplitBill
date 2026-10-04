@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { postChat, postUpload, subscribe } from "../a2ui/api";
 
 type Line = { id: number; role: "user" | "assistant" | "note" | "error"; text: string; turn?: number };
@@ -14,7 +14,7 @@ const QUICK = [
 
 let nextId = 1;
 
-export function Chat() {
+export function Chat({ composerRef }: { composerRef?: RefObject<HTMLTextAreaElement | null> }) {
   const [lines, setLines] = useState<Line[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -104,6 +104,7 @@ export function Chat() {
         }}
       >
         <textarea
+          ref={composerRef}
           value={text}
           rows={3}
           placeholder="Сообщение агенту…"

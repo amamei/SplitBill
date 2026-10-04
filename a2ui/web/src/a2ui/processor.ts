@@ -7,8 +7,10 @@ import { basicCatalog, type ReactComponentImplementation } from "@a2ui/react/v0_
 export type A2uiEnvelope = { version: string } & Record<string, unknown>;
 export type FeedError = { message: string; envelope: A2uiEnvelope };
 type ActionListener = (action: ActionPayload) => void;
+type FeedErrorListener = (errors: FeedError[]) => void;
 
 const actionListeners = new Set<ActionListener>();
+const feedErrorListeners = new Set<FeedErrorListener>();
 
 export const processor = new MessageProcessor<ReactComponentImplementation>([basicCatalog], (action) => {
   console.info("[a2ui.action]", action);
@@ -18,6 +20,12 @@ export const processor = new MessageProcessor<ReactComponentImplementation>([bas
 export function onAction(listener: ActionListener): () => void {
   actionListeners.add(listener);
   return () => actionListeners.delete(listener);
+}
+
+/** Renderer rejections from every `feed()` call (SSE and spike fixtures alike). */
+export function onFeedError(listener: FeedErrorListener): () => void {
+  feedErrorListeners.add(listener);
+  return () => feedErrorListeners.delete(listener);
 }
 
 function envelopeType(envelope: A2uiEnvelope): string {
@@ -46,6 +54,7 @@ export function feed(envelopes: readonly A2uiEnvelope[]): FeedError[] {
       errors.push({ message, envelope });
     }
   }
+  if (errors.length > 0) for (const l of feedErrorListeners) l(errors);
   return errors;
 }
 

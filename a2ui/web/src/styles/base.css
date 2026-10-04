@@ -70,3 +70,7 @@ select {
     min-height: 44px;
   }
 }
+
+[hidden] {
+  display: none !important;
+}

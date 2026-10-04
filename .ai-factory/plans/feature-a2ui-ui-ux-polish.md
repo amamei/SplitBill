@@ -152,7 +152,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
 
 ### Phase 2: Shell layout and navigation
 
-- [ ] **T3. App header, connection status and activity indicator**
+- [x] **T3. App header, connection status and activity indicator**
   - Create `a2ui/web/src/components/AppHeader.tsx` and replace the header at `App.tsx:98-101` with it. It is sticky (`position: sticky; top: 0`), uses a blurred panel background and has a bottom border. Contents, left to right:
     - Brand "Split Bill" with a caption "A2UI v0.9".
     - `ConnectionStatus`.
@@ -168,7 +168,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
     - This fixes the current gap where server-handled UI actions (add person, save item) give no feedback.
   - Done when the header shows readable connection state in both themes, stopping the server flips it to "Переподключение…" or "Нет связи", and clicking any A2UI button shows the bar until the response arrives.
 
-- [ ] **T4. Responsive two-pane layout, mobile tab bar and keyboard shortcuts**
+- [x] **T4. Responsive two-pane layout, mobile tab bar and keyboard shortcuts**
   - Create `a2ui/web/src/lib/media.ts`: a `useMediaQuery(query)` hook (`useSyncExternalStore` over `matchMedia`) and the constant `MOBILE_QUERY = "(max-width: 859.98px)"`.
   - Create `a2ui/web/src/lib/shortcuts.ts`: a pure `matchShortcut(e: Pick<KeyboardEvent,"key"|"ctrlKey"|"metaKey"|"shiftKey"|"altKey"|"isComposing"> , targetIsEditable: boolean): Action | null`. Actions:
     - `/` → `focusComposer`, only when the target is not editable.
@@ -192,10 +192,11 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
   - Tests: create `a2ui/web/src/lib/__tests__/shortcuts.test.ts` covering every mapping, the editable-target guard for `/`, `isComposing` → null, and Ctrl versus Meta.
   - Done when the layout is usable at 375, 768, 1024 and 1440px with no horizontal page scroll, the tab switch preserves chat scroll and input text, and the shortcuts work and are ignored while typing (except Esc).
 
-- [ ] **T5. Surface frames, surface switcher and in-surface outline navigation**
+- [x] **T5. Surface frames, surface switcher and in-surface outline navigation**
   - Create `a2ui/web/src/lib/surfaces.ts` (pure, tested):
     - `orderSurfaces(ids)`: `bill` first, then creation order (moved from `Surfaces.tsx:24`).
     - `surfaceTitle(id, theme?)`:
+      - Implementation note: `bill` is always titled "Счёт", even when its theme carries `agentDisplayName` ("Split Bill" is the brand, not a section title).
       - `theme.agentDisplayName` if it is a non-empty string, else:
       - `bill` → "Счёт";
       - `chart-N` → "Диаграмма N";
@@ -219,7 +220,7 @@ Representative real artifact: the control example from `TZ.md` §6, seeded with 
   - Tests: create `a2ui/web/src/lib/__tests__/surfaces.test.ts` covering ordering, titles (theme name, bill, chart-2, custom id), rejection of `safeAccent` input such as `red` / `#fff` / `javascript:`, and slug de-duplication and Cyrillic handling.
   - Done when, with the seeded control example, the outline shows "Участники · Позиции · Редактор позиции · Итог" (headings of the reference tree), clicking a chip scrolls to the card below the sticky bars, and an S7 surface appears in the switcher, scrolls into view and can be collapsed or hidden.
 
-- [ ] **T6. Debug drawer hidden by default, and user-facing render errors**
+- [x] **T6. Debug drawer hidden by default, and user-facing render errors**
   - Create `a2ui/web/src/components/DebugDrawer.tsx` to host the current `MessageLog` content (turn table plus envelope list).
     - Closed by default (fixes `MessageLog.tsx:17` `open = true`).
     - Opened by the header "Отладка" button, by Ctrl/Cmd+Shift+D, or automatically on load when `?debug=1&log=open`. The open state persists through the `a2ui-debug-open` pref.
