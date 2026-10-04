@@ -9,6 +9,7 @@ import type { BillViewModel, DraftVm, EditorVm } from "./view-model.js";
 const logger = createScope("projector.projectBill");
 
 export interface UiErrors {
+  general?: { message: string };
   removePerson?: { message: string; items: Array<{ itemId: string; title: string }> };
 }
 
@@ -60,6 +61,7 @@ export function projectBill(bill: Bill, ui: UiState = {}): BillViewModel {
       })),
     },
     errors: {
+      general: ui.errors?.general ?? { message: "" },
       removePerson: ui.errors?.removePerson ?? { message: "", items: [] },
     },
   };

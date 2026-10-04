@@ -23,6 +23,8 @@ export const config = {
   effort: (process.env.ANTHROPIC_EFFORT || "medium") as "low" | "medium" | "high" | "xhigh" | "max",
   port: Number(process.env.PORT || 8787),
   stream: (process.env.A2UI_STREAM ?? "1") !== "0",
+  /** Server-side refusal fallback (`fallbacks: "default"`); ANTHROPIC_FALLBACKS=off keeps every turn on one model. */
+  fallbacks: (process.env.ANTHROPIC_FALLBACKS ?? "default") !== "off",
   logLevel: process.env.LOG_LEVEL || "info",
   envFile: envLoaded ? envPath : null,
 };

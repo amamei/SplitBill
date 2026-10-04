@@ -47,6 +47,9 @@ export const BillViewModelSchema = z
       transfers: z.array(z.object({ fromId: text, toId: text, text: text, amountText: text })),
     }),
     errors: z.object({
+      general: z
+        .object({ message: text })
+        .describe("Last failed UI action outside the editor (add_person, add_item, rename_person…); empty when none"),
       removePerson: z.object({
         message: text,
         items: z.array(z.object({ itemId: text, title: text })).describe("Items blocking the removal; empty when there is no error"),

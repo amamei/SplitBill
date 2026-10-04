@@ -45,7 +45,7 @@ describe("projectBill on the control example", () => {
     assert.equal(vm.summary.rows.find((r) => r.name === "Аня")!.balanceText, "+385.00");
     assert.equal(vm.summary.transfers.length, 3);
     assert.match(vm.summary.transfers[0].text, /^\S+ → \S+ \d+\.\d\d$/);
-    assert.deepEqual(vm.errors.removePerson, { message: "", items: [] });
+    assert.deepEqual(vm.errors, { general: { message: "" }, removePerson: { message: "", items: [] } });
   });
 
   it("editor rows follow the selected item's split type", () => {
