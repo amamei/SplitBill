@@ -1,5 +1,6 @@
-// S1 + S6 smoke test against the live model of the active LLM_PROVIDER: Claude (needs Anthropic
-// credentials: `ant auth login` or ANTHROPIC_API_KEY) or a local Ollama model (LLM_PROVIDER=ollama).
+// S1 + S6 smoke test against the live model of the active LLM_PROVIDER: Dahl (default; needs
+// DAHL_API_KEY in .env), Claude (LLM_PROVIDER=anthropic; `ant auth login` or ANTHROPIC_API_KEY) or a
+// local Ollama model (LLM_PROVIDER=ollama). A hosted or local model can take minutes for S1.
 // Usage: npm -w server run smoke:s1
 import { Session } from "../src/agent/session.js";
 import { runTurn } from "../src/agent/runner.js";

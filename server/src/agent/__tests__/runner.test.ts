@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import Anthropic from "@anthropic-ai/sdk";
 import type { LlmConfig } from "../../config.js";
 import { dispatchAction } from "../actions.js";
+import { DahlApiError, DahlMissingKeyError } from "../dahl.js";
 import { runTurn, STATE_SYNC_PREFIX } from "../runner.js";
 import { action, controlSession } from "./helpers.js";
 
 const ANTHROPIC = { provider: "anthropic", model: "claude-opus-5-5", effort: "medium", fallbacks: true } as const satisfies LlmConfig;
 const OLLAMA = { provider: "ollama", model: "m", baseURL: "http://x" } as const satisfies LlmConfig;
+const DAHL = { provider: "dahl", model: "MiniMaxAI/MiniMax-M2.7", baseURL: "https://dahl.test/v1" } as const satisfies LlmConfig;
 
 type Params = { messages: Array<{ role: string; content: unknown }> } & Record<string, unknown>;
 
@@ -117,6 +119,21 @@ describe("runTurn", () => {
     assert.equal(telemetry.model, "m");
   });
 
+  it("sends Dahl the plain request too: no effort, betas, fallbacks or cache_control", async () => {
+    const { session } = controlSession();
+    const { client, calls } = stubClient();
+    const telemetry = await runTurn(session, "привет", { client, llm: DAHL });
+    const p = calls[0] as Params & { system: Array<{ text: string; cache_control?: unknown }> };
+    assert.equal(p.model, DAHL.model);
+    assert.equal(p.output_config, undefined);
+    assert.equal(p.betas, undefined);
+    assert.equal(p.fallbacks, undefined);
+    assert.equal(p.system[0].cache_control, undefined);
+    assert.ok(p.system[0].text.length > 1000, "the full system prompt is still sent");
+    assert.equal(p.stream, true);
+    assert.equal(telemetry.model, DAHL.model);
+  });
+
   it("an API failure drops the turn from history and reports an error event", async () => {
     const { session } = controlSession();
     const errors: unknown[] = [];
@@ -164,6 +181,42 @@ describe("runTurn", () => {
     assert.equal(errors.length, 1);
     assert.match(errors[0].message, /ollama serve/);
     assert.equal(session.messages.length, 0);
+    assert.equal(session.busy, false);
+  });
+  const failingClient = (error: unknown) =>
+    ({
+      beta: {
+        messages: {
+          toolRunner(params: Params) {
+            return {
+              params,
+              async *[Symbol.asyncIterator]() {
+                throw error;
+              },
+            };
+          },
+        },
+      },
+    }) as unknown as Pick<Anthropic, "beta">;
+
+  it("a rejected Dahl key points at DAHL_API_KEY and rolls the turn back", async () => {
+    const { session } = controlSession();
+    const errors: Array<{ message: string }> = [];
+    session.subscribe((event, data) => event === "error" && errors.push(data as { message: string }));
+    const telemetry = await runTurn(session, "привет", { client: failingClient(new DahlApiError(401, "invalid API token")), llm: DAHL });
+    assert.equal(errors.length, 1);
+    assert.match(errors[0].message, /DAHL_API_KEY/);
+    assert.match(String(telemetry.error), /не принял ключ \(401\)/);
+    assert.equal(session.messages.length, 0);
+    assert.equal(session.busy, false);
+  });
+
+  it("a missing Dahl key tells how to add it", async () => {
+    const { session } = controlSession();
+    const errors: Array<{ message: string }> = [];
+    session.subscribe((event, data) => event === "error" && errors.push(data as { message: string }));
+    await runTurn(session, "привет", { client: failingClient(new DahlMissingKeyError()), llm: DAHL });
+    assert.match(errors[0].message, /Не задан DAHL_API_KEY.*\.env/);
     assert.equal(session.busy, false);
   });
 });

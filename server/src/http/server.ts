@@ -3,10 +3,10 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
-import { config, logConfig } from "../config.js";
+import { config, logConfig, type LlmConfig } from "../config.js";
 import { createScope } from "../log.js";
 import { dispatchAction } from "../agent/actions.js";
-import { preflightOllama } from "../agent/llm.js";
+import { preflightDahl, preflightOllama, supportsVision } from "../agent/llm.js";
 import { buildSystemPrompt, promptVersion } from "../agent/prompt.js";
 import { runTurn, type UserContent } from "../agent/runner.js";
 import type { Session } from "../agent/session.js";
@@ -69,7 +69,9 @@ function startTurn(session: Session, content: UserContent, kind: "chat" | "actio
   runTurn(session, content, { kind }).catch((err) => logger.error("turn crashed", { session: session.id, err: err instanceof Error ? err.stack : String(err) }));
 }
 
-export function createApp(): express.Express {
+/** `opts.llm` only decides what /api/health reports and whether /api/upload is allowed (a test seam; turns use config.llm). */
+export function createApp(opts: { llm?: LlmConfig } = {}): express.Express {
+  const llm = opts.llm ?? config.llm;
   const app = express();
   app.use(express.json({ limit: "15mb" }));
   app.use((req, res, next) => {
@@ -83,7 +85,7 @@ export function createApp(): express.Express {
   });
 
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, provider: config.llm.provider, model: config.model });
+    res.json({ ok: true, provider: llm.provider, model: llm.model, vision: supportsVision(llm) });
   });
 
   app.get("/api/events", (req, res) => {
@@ -126,6 +128,14 @@ export function createApp(): express.Express {
   });
 
   app.post("/api/upload", (req, res) => {
+    if (!supportsVision(llm)) {
+      logger.warn("upload refused: no vision", { provider: llm.provider, model: llm.model });
+      throw new HttpError(
+        422,
+        "NO_VISION",
+        `Модель ${llm.model} (Dahl) не читает изображения. Опишите чек текстом или переключитесь на провайдера с vision (LLM_PROVIDER=anthropic).`,
+      );
+    }
     const body = parse(UploadBody, req.body);
     const content: UserContent = [
       { type: "image", source: { type: "base64", media_type: body.mediaType, data: body.dataBase64 } },
@@ -189,6 +199,7 @@ export function createApp(): express.Express {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   logConfig();
+  if (config.llm.provider === "dahl") void preflightDahl(config.llm);
   if (config.llm.provider === "ollama") void preflightOllama(config.llm);
   buildSystemPrompt();
   createApp().listen(config.port, () => {

@@ -1,5 +1,6 @@
-// One agent turn: tool runner (streaming) over the session's conversation — Claude or a local
-// Ollama model through its Anthropic-compatible API, same SDK and tools (see ./llm.ts).
+// One agent turn: tool runner (streaming) over the session's conversation — the Dahl inference API
+// (./dahl.ts), Claude, or a local Ollama model (Anthropic-compatible API), all behind the same
+// `client.beta.messages.toolRunner` surface and the same tools (see ./llm.ts).
 // History is append-only (prompt cache + preserved thinking): UI-side changes reach the
 // model as a state-sync text block in the next user message, never by editing history.
 import Anthropic from "@anthropic-ai/sdk";
@@ -125,7 +126,7 @@ export async function runTurn(
   } catch (err) {
     failed = true;
     recorder.data.error = describeLlmError(err, llm);
-    logger.error("failed", { turn, provider: llm.provider, status: err instanceof Anthropic.APIError ? err.status : undefined, err: err instanceof Error ? err.message : String(err) });
+    logger.error("failed", { turn, provider: llm.provider, status: (err as { status?: number }).status, err: err instanceof Error ? err.message : String(err) });
     session.send("error", { turn, message: recorder.data.error });
   } finally {
     streamer.abortAll();
