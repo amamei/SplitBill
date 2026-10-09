@@ -9,11 +9,11 @@ type Line = { id: number; role: "user" | "assistant" | "note" | "error"; text: s
 // Labels are for people; the texts are the TZ scenarios (S1 control example, S6 edit, S7 chart).
 const QUICK = [
   {
-    label: "Пример из ТЗ",
+    label: "Ужин на четверых — пример",
     text: "Были Аня, Боря, Вика, Гена. Еда 1200 — платил Боря, поровну на всех. Кальяны 800 — платила Аня, доли: Аня 2, Боря 1, Вика 1. Вино 600 — платила Аня, суммы: Аня 250, Боря 250, Вика 100. Чаевые 260 — платила Вика, поровну на всех.",
   },
-  { label: "Гена курил — правка", text: "Гена тоже курил, одна доля" },
-  { label: "Диаграмма долгов", text: "Покажи диаграммой, кто сколько потратил" },
+  { label: "Гена тоже курил", text: "Гена тоже курил, одна доля" },
+  { label: "Кто сколько потратил", text: "Покажи диаграммой, кто сколько потратил" },
 ];
 
 const MAX_ROWS = 6;
@@ -140,7 +140,7 @@ export function Chat({ composerRef }: { composerRef?: RefObject<HTMLTextAreaElem
         {lines.length === 0 && (
           <div className="chat-welcome">
             <h2>Разделим счёт</h2>
-            <p>Опишите, кто был, что заказали и кто за что платил — агент соберёт счёт справа. Дальше всё правится кнопками.</p>
+            <p>Расскажите, кто был, что заказали и кто за что платил. Агент соберёт счёт, а дальше всё правится кнопками.</p>
             {quickChips("chat-welcome-chips")}
             <p className="chat-welcome-keys">
               <kbd>Enter</kbd> — отправить, <kbd>Shift</kbd>+<kbd>Enter</kbd> — новая строка, <kbd>/</kbd> — к полю ввода

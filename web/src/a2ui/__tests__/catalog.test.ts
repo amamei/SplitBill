@@ -4,15 +4,16 @@ import { basicCatalog } from "@a2ui/react/v0_9";
 import { appCatalog, variantClass } from "../catalog";
 
 describe("appCatalog", () => {
-  it("keeps the basic catalog id and component names", () => {
+  it("keeps the basic catalog id and component names, plus the two charts", () => {
     assert.equal(appCatalog.id, basicCatalog.id);
-    assert.deepEqual([...appCatalog.components.keys()].sort(), [...basicCatalog.components.keys()].sort());
-    assert.equal(appCatalog.components.size, 18);
+    assert.deepEqual([...appCatalog.components.keys()].sort(), [...basicCatalog.components.keys(), "BarChart", "PieChart"].sort());
+    assert.equal(appCatalog.components.size, 20);
   });
 
-  it("replaces only the Button implementation", () => {
+  it("replaces only the Button implementation among the basic components", () => {
     for (const [name, impl] of appCatalog.components) {
       if (name === "Button") assert.notEqual(impl, basicCatalog.components.get(name));
+      else if (name === "BarChart" || name === "PieChart") assert.equal(basicCatalog.components.has(name), false);
       else assert.equal(impl, basicCatalog.components.get(name), name);
     }
   });

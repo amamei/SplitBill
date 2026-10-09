@@ -6,27 +6,44 @@
  */
 
 :root {
-  /* palette — light */
-  --page-bg: #f4f2ee;
-  --page-fg: #1d1b18;
-  --muted: #6b665e;
+  /* palette — light. A receipt (paper) on a sage tabletop (page-bg), written in stamp ink. */
+  --page-bg: #dce3da;
+  --page-fg: #1e1a2b;
+  --muted: #625e70;
   --panel: #ffffff;
-  --panel-2: #faf8f5;
-  --line: #e2ddd4;
-  --line-strong: #cbc4b8;
-  --accent: #2f6f5e;
-  --accent-hover: #255a4c;
-  --accent-soft: #e3efeb;
+  --panel-2: #f4f5f2;
+  --line: #e3e4e6;
+  --line-strong: #c9cad0;
+  --accent: #4a3aa8;
+  --accent-hover: #3b2d8c;
+  --accent-soft: #ebe8f8;
   --on-accent: #ffffff;
-  --success: #2f6f5e;
+  --success: #23795a;
   --warning: #8a5a00;
-  --danger: #b3261e;
-  --danger-soft: #f9e3e1;
+  --danger: #c2362b;
+  --danger-soft: #fbe7e4;
   --info: #3559a8;
-  --shadow-1: 0 1px 2px rgb(29 27 24 / 6%), 0 1px 3px rgb(29 27 24 / 5%);
-  --shadow-2: 0 8px 28px rgb(29 27 24 / 14%), 0 2px 6px rgb(29 27 24 / 8%);
-  --scrim: rgb(29 27 24 / 32%);
-  --header-glass: rgb(244 242 238 / 94%);
+  --marker: #f7e27e;
+  --table-edge: #c8d1c5;
+  --shadow-1: 0 1px 2px rgb(30 26 43 / 6%), 0 2px 6px rgb(30 26 43 / 5%);
+  --shadow-2: 0 12px 32px rgb(30 26 43 / 16%), 0 2px 6px rgb(30 26 43 / 8%);
+  --shadow-paper: 0 1px 1px rgb(30 26 43 / 5%), 0 10px 24px -14px rgb(40 60 40 / 40%);
+  --scrim: rgb(30 26 43 / 36%);
+  --header-glass: rgb(220 227 218 / 88%);
+
+  /* chart series: fixed order, never cycled (9th+ → other). Validated for colour-blind
+     separation against --panel in both themes; three light slots are under 3:1, so charts
+     always print a text label next to every mark. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #4a3aa7;
+  --chart-8: #e34948;
+  --chart-other: #a3a6a0;
+  --chart-track: #eeefec;
 
   /* spacing, radii, type */
   --space-1: 4px;
@@ -36,10 +53,11 @@
   --space-5: 24px;
   --space-6: 32px;
   --radius-s: 6px;
-  --radius-m: 10px;
-  --radius-l: 14px;
+  --radius-m: 12px;
+  --radius-l: 18px;
   --radius-pill: 999px;
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-sans: "Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Unbounded", "Golos Text", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-size-xs: 0.75rem;
   --font-size-s: 0.875rem;
@@ -57,50 +75,76 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --page-bg: #151413;
-    --page-fg: #ece8e1;
-    --muted: #a39d93;
-    --panel: #201e1b;
-    --panel-2: #1a1917;
-    --line: #34312c;
-    --line-strong: #4a463f;
-    --accent: #6cc3a8;
-    --accent-hover: #86d3bb;
-    --accent-soft: #1f3530;
-    --on-accent: #0f1f1a;
-    --success: #6cc3a8;
+    --page-bg: #141c17;
+    --page-fg: #ebeee9;
+    --muted: #a3aaa2;
+    --panel: #222b25;
+    --panel-2: #29332c;
+    --line: #333d36;
+    --line-strong: #48534b;
+    --accent: #ada4f2;
+    --accent-hover: #c3bcf7;
+    --accent-soft: #2e2b4a;
+    --on-accent: #17132e;
+    --success: #7fd0ac;
     --warning: #e0b062;
-    --danger: #f2b8b5;
-    --danger-soft: #3a2120;
+    --danger: #f2a49b;
+    --danger-soft: #3d2320;
     --info: #9db6ee;
+    --marker: rgb(233 207 106 / 32%);
+    --table-edge: #0e1410;
     --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
-    --shadow-2: 0 10px 30px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
-    --scrim: rgb(0 0 0 / 50%);
-    --header-glass: rgb(21 20 19 / 94%);
+    --shadow-2: 0 12px 32px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
+    --shadow-paper: 0 1px 1px rgb(0 0 0 / 30%), 0 12px 28px -14px rgb(0 0 0 / 70%);
+    --scrim: rgb(0 0 0 / 55%);
+    --header-glass: rgb(20 28 23 / 88%);
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+    --chart-4: #c98500;
+    --chart-5: #d55181;
+    --chart-6: #008300;
+    --chart-7: #9085e9;
+    --chart-8: #e66767;
+    --chart-other: #66706a;
+    --chart-track: #2c352f;
   }
 }
 
 :root[data-theme="dark"] {
-  --page-bg: #151413;
-  --page-fg: #ece8e1;
-  --muted: #a39d93;
-  --panel: #201e1b;
-  --panel-2: #1a1917;
-  --line: #34312c;
-  --line-strong: #4a463f;
-  --accent: #6cc3a8;
-  --accent-hover: #86d3bb;
-  --accent-soft: #1f3530;
-  --on-accent: #0f1f1a;
-  --success: #6cc3a8;
+  --page-bg: #141c17;
+  --page-fg: #ebeee9;
+  --muted: #a3aaa2;
+  --panel: #222b25;
+  --panel-2: #29332c;
+  --line: #333d36;
+  --line-strong: #48534b;
+  --accent: #ada4f2;
+  --accent-hover: #c3bcf7;
+  --accent-soft: #2e2b4a;
+  --on-accent: #17132e;
+  --success: #7fd0ac;
   --warning: #e0b062;
-  --danger: #f2b8b5;
-  --danger-soft: #3a2120;
+  --danger: #f2a49b;
+  --danger-soft: #3d2320;
   --info: #9db6ee;
+  --marker: rgb(233 207 106 / 32%);
+  --table-edge: #0e1410;
   --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow-2: 0 10px 30px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
-  --scrim: rgb(0 0 0 / 50%);
-  --header-glass: rgb(21 20 19 / 94%);
+  --shadow-2: 0 12px 32px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
+  --shadow-paper: 0 1px 1px rgb(0 0 0 / 30%), 0 12px 28px -14px rgb(0 0 0 / 70%);
+  --scrim: rgb(0 0 0 / 55%);
+  --header-glass: rgb(20 28 23 / 88%);
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+  --chart-other: #66706a;
+  --chart-track: #2c352f;
   color-scheme: dark;
 }
 

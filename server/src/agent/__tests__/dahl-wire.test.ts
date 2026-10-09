@@ -105,6 +105,23 @@ describe("toOpenAiMessages", () => {
     );
   });
 
+  it("sends an image as an image_url part when images are allowed, keeping text-only users as a string", () => {
+    const messages = toOpenAiMessages(
+      undefined,
+      [
+        { role: "user", content: [{ type: "text", text: "чек" }, { type: "image", source: { type: "base64", media_type: "image/jpeg", data: "/9j/" } }] },
+        { role: "user", content: [{ type: "text", text: "a" }, { type: "text", text: "b" }] },
+        { role: "user", content: [{ type: "image", source: { type: "url", url: "https://x/y.png" } }] },
+      ],
+      { allowImages: true },
+    );
+    assert.deepEqual(messages, [
+      { role: "user", content: [{ type: "text", text: "чек" }, { type: "image_url", image_url: { url: "data:image/jpeg;base64,/9j/" } }] },
+      { role: "user", content: "a\n\nb" },
+      { role: "user", content: [{ type: "image_url", image_url: { url: "https://x/y.png" } }] },
+    ]);
+  });
+
   it("reads the system prompt from a string or from text blocks", () => {
     assert.equal(systemText("a"), "a");
     assert.equal(systemText([{ type: "text", text: "a" }, { type: "text", text: "b" }]), "a\n\nb");

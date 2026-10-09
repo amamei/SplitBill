@@ -6,7 +6,7 @@ import { z } from "zod";
 import { config, logConfig, type LlmConfig } from "../config.js";
 import { createScope } from "../log.js";
 import { dispatchAction } from "../agent/actions.js";
-import { preflightDahl, preflightOllama, supportsVision } from "../agent/llm.js";
+import { preflightDahl, preflightGemini, preflightOllama, preflightOpenRouter, supportsVision } from "../agent/llm.js";
 import { buildSystemPrompt, promptVersion } from "../agent/prompt.js";
 import { runTurn, type UserContent } from "../agent/runner.js";
 import type { Session } from "../agent/session.js";
@@ -201,6 +201,8 @@ if (isMain) {
   logConfig();
   if (config.llm.provider === "dahl") void preflightDahl(config.llm);
   if (config.llm.provider === "ollama") void preflightOllama(config.llm);
+  if (config.llm.provider === "gemini") void preflightGemini(config.llm);
+  if (config.llm.provider === "openrouter") void preflightOpenRouter(config.llm);
   buildSystemPrompt();
   createApp().listen(config.port, () => {
     logger.info("listening", { port: config.port, webDist: fs.existsSync(webDist) ? webDist : null });

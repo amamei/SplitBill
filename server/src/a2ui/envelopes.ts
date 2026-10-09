@@ -16,7 +16,7 @@ export type A2uiEnvelope =
   | { version: typeof A2UI_VERSION; deleteSurface: { surfaceId: string } };
 
 /** Spec theme for the bill surface (createSurface.theme: primaryColor #RRGGBB, agentDisplayName). */
-export const DEFAULT_THEME = { primaryColor: "#2f6f5e", agentDisplayName: "Split Bill" } as const;
+export const DEFAULT_THEME = { primaryColor: "#4a3aa8", agentDisplayName: "Split Bill" } as const;
 
 /** The bill carries the full theme; extra surfaces (S7 charts) only the colour, so the client titles them by id. */
 export function surfaceTheme(surfaceId: string): Record<string, unknown> {

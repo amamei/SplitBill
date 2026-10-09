@@ -2,6 +2,7 @@
 // gives each heading an anchor id and tracks which one is currently in view.
 import { useEffect, useState } from "react";
 import { debug } from "./log";
+import { sectionOf } from "./billSections";
 import { slugHeading } from "./surfaces";
 
 export interface OutlineItem {
@@ -13,7 +14,9 @@ export interface OutlineItem {
 function sectionHeadings(root: HTMLElement): HTMLElement[] {
   const fromCards = [...root.querySelectorAll<HTMLElement>(".a2ui-card")]
     .map((card) => card.querySelector<HTMLElement>("h2, h3, h4"))
-    .filter((h): h is HTMLElement => h !== null);
+    .filter((h): h is HTMLElement => h !== null)
+    // The item editor opens as a dialog (ItemEditorDialog), so it is not a section to jump to.
+    .filter((h) => sectionOf(h.textContent ?? "") !== "editor");
   const unique = [...new Set(fromCards)];
   return unique.length >= 2 ? unique : [...root.querySelectorAll<HTMLElement>("h2, h3")];
 }

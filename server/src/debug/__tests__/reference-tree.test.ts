@@ -6,7 +6,7 @@ import { REFERENCE_BILL_TREE } from "../reference-tree.js";
 
 describe("reference bill tree (prompt layout contract)", () => {
   it("is a valid A2UI v0.9 tree", () => {
-    assert.deepEqual(validateComponents(REFERENCE_BILL_TREE), { ok: true });
+    assert.deepEqual(validateComponents(REFERENCE_BILL_TREE, { surfaceId: "bill" }), { ok: true });
   });
 
   it("uses every server-handled action", () => {

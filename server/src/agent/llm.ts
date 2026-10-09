@@ -1,19 +1,22 @@
 // LLM provider seam: the client behind the agent's tool-runner surface (the Dahl inference API
-// through ./dahl.ts, or the Anthropic SDK for Claude and for a local Ollama model, which serves the
-// Anthropic-compatible POST /v1/messages), the provider-dependent part of the tool-runner
-// request, user-facing error text, and startup checks for Dahl and Ollama.
+// through ./dahl.ts, Google Gemini through ./gemini.ts, OpenRouter through ./openrouter.ts, or the
+// Anthropic SDK for Claude and for a local Ollama model, which serves the Anthropic-compatible
+// POST /v1/messages), the provider-dependent part of the tool-runner request, user-facing error
+// text, and startup checks for Dahl, Gemini, OpenRouter and Ollama.
 import Anthropic from "@anthropic-ai/sdk";
 import type { BetaToolRunnerParams } from "@anthropic-ai/sdk/lib/tools/BetaToolRunner";
-import { config, dahlApiKey, type LlmConfig } from "../config.js";
+import { config, dahlApiKey, geminiApiKey, openRouterApiKey, type LlmConfig } from "../config.js";
 import { createScope } from "../log.js";
 import { createDahlClient, DahlApiError, DahlConnectionError, DahlMissingKeyError, UnsupportedContentError, type DahlConfig } from "./dahl.js";
+import { createGeminiClient, GeminiApiError, GeminiConnectionError, GeminiMissingKeyError, type GeminiConfig } from "./gemini.js";
+import { createOpenRouterClient, OpenRouterApiError, OpenRouterConnectionError, OpenRouterMissingKeyError, type OpenRouterConfig } from "./openrouter.js";
 
 const logger = createScope("agent.llm");
 
 export class TruncatedToolInput extends Error {}
 
-/** The Anthropic SDK client: Claude, or a local Ollama server (Dahl has its own client, see createAgentClient). */
-export function createLlmClient(llm: Exclude<LlmConfig, { provider: "dahl" }>): Anthropic {
+/** The Anthropic SDK client: Claude, or a local Ollama server (Dahl, Gemini and OpenRouter have their own, see createAgentClient). */
+export function createLlmClient(llm: Extract<LlmConfig, { provider: "anthropic" | "ollama" }>): Anthropic {
   if (llm.provider === "anthropic") return new Anthropic();
   // Explicit apiKey skips the `ant` profile lookup; authToken: null keeps a stray
   // ANTHROPIC_AUTH_TOKEN out of requests to the local server. Ollama ignores the key.
@@ -22,7 +25,10 @@ export function createLlmClient(llm: Exclude<LlmConfig, { provider: "dahl" }>): 
 
 /** What runner.ts needs from any provider: `client.beta.messages.toolRunner(params)`. */
 export function createAgentClient(llm: LlmConfig): Pick<Anthropic, "beta"> {
-  return llm.provider === "dahl" ? createDahlClient(llm) : createLlmClient(llm);
+  if (llm.provider === "dahl") return createDahlClient(llm);
+  if (llm.provider === "gemini") return createGeminiClient(llm);
+  if (llm.provider === "openrouter") return createOpenRouterClient(llm);
+  return createLlmClient(llm);
 }
 
 let defaultClient: Pick<Anthropic, "beta"> | undefined;
@@ -34,7 +40,11 @@ export function getLlmClient(): Pick<Anthropic, "beta"> {
   return defaultClient;
 }
 
-/** Whether the provider's model can read images (receipt photos, S9). No Dahl model can. */
+/**
+ * Whether the provider's model can read images (receipt photos, S9). No Dahl model can; Gemini and
+ * Claude can. Ollama and OpenRouter depend on the chosen model: they are assumed to, and their
+ * preflight warns when the model has no image input.
+ */
 export function supportsVision(llm: LlmConfig): boolean {
   return llm.provider !== "dahl";
 }
@@ -84,6 +94,45 @@ function describeOllamaError(err: unknown, llm: Extract<LlmConfig, { provider: "
   return undefined;
 }
 
+function describeGeminiError(err: unknown, llm: GeminiConfig): string | undefined {
+  if (err instanceof GeminiMissingKeyError) return "Не задан GEMINI_API_KEY. Добавьте ключ из Google AI Studio в .env и перезапустите сервер.";
+  if (err instanceof UnsupportedContentError) return `Gemini не принял часть сообщения (${err.kind}) — опишите чек текстом.`;
+  if (err instanceof GeminiConnectionError) return `Нет соединения с Gemini (${llm.baseURL}): ${err.message}. Проверьте сеть и повторите.`;
+  if (err instanceof GeminiApiError) {
+    if (err.status === 401 || (err.status === 400 && /api key/i.test(err.message))) {
+      return "Gemini не принял ключ. Проверьте GEMINI_API_KEY и перезапустите сервер.";
+    }
+    if (err.status === 403) return `Нет доступа к Gemini (403): ${err.message}`;
+    if (err.status === 404) return `Модель ${llm.model} не найдена в Gemini («${err.message}»). Задайте в GEMINI_MODEL доступную модель.`;
+    if (err.status === 429) return "Превышена квота или лимит запросов Gemini (429), попробуйте через минуту.";
+    if (err.status === 400) return `Некорректный запрос к Gemini: ${err.message}`;
+    if (err.status >= 500) return `Gemini временно недоступен (${err.status}), повторите через пару секунд.`;
+    return `Ошибка Gemini ${err.status}: ${err.message}`;
+  }
+  return undefined;
+}
+
+function describeOpenRouterError(err: unknown, llm: OpenRouterConfig): string | undefined {
+  if (err instanceof OpenRouterMissingKeyError) return "Не задан OPENROUTER_API_KEY. Добавьте ключ из https://openrouter.ai/keys в .env и перезапустите сервер.";
+  if (err instanceof UnsupportedContentError) return `OpenRouter не принял часть сообщения (${err.kind}) — опишите чек текстом.`;
+  if (err instanceof OpenRouterConnectionError) return `Нет соединения с OpenRouter (${llm.baseURL}): ${err.message}. Проверьте сеть и повторите.`;
+  if (err instanceof OpenRouterApiError) {
+    if (err.status === 401) return "OpenRouter не принял ключ (401). Проверьте OPENROUTER_API_KEY и перезапустите сервер.";
+    if (err.status === 402) return "На счёте OpenRouter закончились кредиты (402). Пополните баланс на https://openrouter.ai/credits.";
+    if (err.status === 403) return `OpenRouter отклонил запрос модерацией (403): ${err.message}`;
+    if (err.status === 404) return `Модель ${llm.model} не найдена в OpenRouter («${err.message}»). Задайте в OPENROUTER_MODEL id из https://openrouter.ai/models.`;
+    if (err.status === 400 && /tool|image|vision|modalit/i.test(err.message)) {
+      return `Модель ${llm.model} не поддерживает инструменты или изображения («${err.message}») — выберите другую в OPENROUTER_MODEL.`;
+    }
+    if (err.status === 400) return `Некорректный запрос к OpenRouter: ${err.message}`;
+    if (err.status === 408) return "OpenRouter не дождался ответа модели (408), повторите.";
+    if (err.status === 429) return "Слишком много запросов к OpenRouter (429), попробуйте через минуту.";
+    if (err.status >= 500) return `Провайдер модели в OpenRouter недоступен (${err.status}), повторите через пару секунд.`;
+    return `Ошибка OpenRouter ${err.status}: ${err.message}`;
+  }
+  return undefined;
+}
+
 function describeDahlError(err: unknown, llm: DahlConfig): string | undefined {
   if (err instanceof DahlMissingKeyError) return "Не задан DAHL_API_KEY. Добавьте ключ в .env и перезапустите сервер.";
   if (err instanceof UnsupportedContentError) return `Модель ${llm.model} в Dahl не читает изображения — опишите чек текстом.`;
@@ -106,6 +155,12 @@ function describeDahlError(err: unknown, llm: DahlConfig): string | undefined {
 export function describeLlmError(err: unknown, llm: LlmConfig): string {
   if (llm.provider === "dahl") {
     const text = describeDahlError(err, llm);
+    if (text) return text;
+  } else if (llm.provider === "gemini") {
+    const text = describeGeminiError(err, llm);
+    if (text) return text;
+  } else if (llm.provider === "openrouter") {
+    const text = describeOpenRouterError(err, llm);
     if (text) return text;
   } else if (llm.provider === "ollama") {
     const text = describeOllamaError(err, llm);
@@ -225,5 +280,133 @@ export async function preflightDahl(llm: DahlConfig, opts: { apiKey?: string; fe
     logger.info("dahl ready", { model: llm.model, models: result.models, keyAccepted: result.keyAccepted });
   }
   logger.info("dahl vision", { hint: "Dahl не читает изображения: загрузка фото чека (S9) отключена" });
+  return result;
+}
+
+export interface GeminiPreflightResult {
+  keyPresent: boolean;
+  /** null: not checked (no key, or Gemini unreachable) or inconclusive. */
+  keyAccepted: boolean | null;
+  modelListed: boolean;
+  models: string[];
+  warnings: string[];
+}
+
+/**
+ * Startup check for Gemini: key present, key accepted and model listed by the OpenAI-compatible
+ * GET /models (it needs the key). Logs, never throws; never logs the key.
+ */
+export async function preflightGemini(llm: GeminiConfig, opts: { apiKey?: string; fetchImpl?: FetchLike } = {}): Promise<GeminiPreflightResult> {
+  const fetchImpl = opts.fetchImpl ?? fetch;
+  const key = "apiKey" in opts ? opts.apiKey?.trim() || undefined : geminiApiKey();
+  const result: GeminiPreflightResult = { keyPresent: Boolean(key), keyAccepted: null, modelListed: false, models: [], warnings: [] };
+
+  if (!key) {
+    result.warnings.push("GEMINI_API_KEY не задан — чат будет отвечать ошибкой, пока ключ не добавлен в .env");
+  } else {
+    try {
+      const res = await fetchImpl(`${llm.baseURL}/models`, { method: "GET", headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(5000) });
+      logger.debug("preflight raw", { path: "/models", status: res.status });
+      if (res.status === 400 || res.status === 401 || res.status === 403) {
+        result.keyAccepted = false;
+        result.warnings.push(`Gemini не принял GEMINI_API_KEY (${res.status})`);
+      } else if (!res.ok) {
+        result.warnings.push(`Gemini ответил ${res.status} на /models`);
+      } else {
+        result.keyAccepted = true;
+        const body = (await res.json()) as { data?: Array<{ id?: unknown }> };
+        // The OpenAI-compatible list names models "models/<id>".
+        result.models = (Array.isArray(body.data) ? body.data : []).map((m) => String(m.id ?? "").replace(/^models\//, "")).filter(Boolean);
+        result.modelListed = result.models.includes(llm.model);
+        if (!result.modelListed) result.warnings.push(`модели ${llm.model} нет в списке Gemini /models (задайте GEMINI_MODEL, например gemini-2.5-flash)`);
+      }
+    } catch (err) {
+      result.warnings.push(`Gemini недоступен по ${llm.baseURL}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  for (const warning of result.warnings) logger.warn("gemini preflight", { warning });
+  if (result.keyAccepted && result.modelListed) logger.info("gemini ready", { model: llm.model, models: result.models.length });
+  return result;
+}
+
+export interface OpenRouterPreflightResult {
+  reachable: boolean;
+  keyPresent: boolean;
+  /** null: not checked (no key, or OpenRouter unreachable) or inconclusive. */
+  keyAccepted: boolean | null;
+  modelListed: boolean;
+  /** null: the model is not listed, so its capabilities are unknown. */
+  tools: boolean | null;
+  vision: boolean | null;
+  warnings: string[];
+}
+
+interface OpenRouterModel {
+  id?: unknown;
+  supported_parameters?: unknown;
+  architecture?: { input_modalities?: unknown };
+}
+
+/**
+ * Startup check for OpenRouter: key present, model listed in the public /models with tools and
+ * image input, key accepted by GET /key. Logs, never throws; never logs the key or the /key body.
+ */
+export async function preflightOpenRouter(llm: OpenRouterConfig, opts: { apiKey?: string; fetchImpl?: FetchLike } = {}): Promise<OpenRouterPreflightResult> {
+  const fetchImpl = opts.fetchImpl ?? fetch;
+  const key = "apiKey" in opts ? opts.apiKey?.trim() || undefined : openRouterApiKey();
+  const result: OpenRouterPreflightResult = { reachable: false, keyPresent: Boolean(key), keyAccepted: null, modelListed: false, tools: null, vision: null, warnings: [] };
+
+  if (!key) result.warnings.push("OPENROUTER_API_KEY не задан — чат будет отвечать ошибкой, пока ключ не добавлен в .env");
+
+  try {
+    const res = await fetchImpl(`${llm.baseURL}/models`, { method: "GET", signal: AbortSignal.timeout(5000) });
+    result.reachable = true;
+    logger.debug("preflight raw", { path: "/models", status: res.status });
+    if (!res.ok) {
+      result.warnings.push(`OpenRouter ответил ${res.status} на /models`);
+    } else {
+      const body = (await res.json()) as { data?: OpenRouterModel[] };
+      const model = (Array.isArray(body.data) ? body.data : []).find((m) => m.id === llm.model);
+      if (!model) {
+        result.warnings.push(`модели ${llm.model} нет в OpenRouter /models (задайте OPENROUTER_MODEL, список: https://openrouter.ai/models)`);
+      } else {
+        result.modelListed = true;
+        const params = Array.isArray(model.supported_parameters) ? model.supported_parameters.map(String) : [];
+        const inputs = Array.isArray(model.architecture?.input_modalities) ? model.architecture.input_modalities.map(String) : [];
+        result.tools = params.includes("tools");
+        result.vision = inputs.includes("image");
+        if (!result.tools) result.warnings.push(`модель ${llm.model} без tools — агент работать не сможет`);
+        if (!result.vision) result.warnings.push(`модель ${llm.model} без vision — загрузка фото (S9) не будет работать`);
+      }
+    }
+  } catch (err) {
+    result.warnings.push(`OpenRouter недоступен по ${llm.baseURL}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  let limitRemaining: unknown;
+  let freeTier: unknown;
+  if (key && result.reachable) {
+    try {
+      const res = await fetchImpl(`${llm.baseURL}/key`, { method: "GET", headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(5000) });
+      logger.debug("preflight raw", { path: "/key", status: res.status });
+      if (res.status === 401) {
+        result.keyAccepted = false;
+        result.warnings.push("OpenRouter не принял OPENROUTER_API_KEY (401)");
+      } else if (res.ok) {
+        result.keyAccepted = true;
+        const body = (await res.json().catch(() => ({}))) as { data?: { limit_remaining?: unknown; is_free_tier?: unknown } };
+        limitRemaining = body.data?.limit_remaining;
+        freeTier = body.data?.is_free_tier;
+      }
+    } catch (err) {
+      logger.debug("preflight key check failed", { err: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  for (const warning of result.warnings) logger.warn("openrouter preflight", { warning });
+  if (result.keyPresent && result.keyAccepted !== false && result.modelListed) {
+    logger.info("openrouter ready", { model: llm.model, tools: result.tools, vision: result.vision, keyAccepted: result.keyAccepted, limitRemaining, freeTier });
+  }
   return result;
 }

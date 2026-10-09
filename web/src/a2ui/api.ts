@@ -42,7 +42,9 @@ export type ServerEvent =
   | { kind: "error"; message: string }
   | { kind: "connection"; state: ConnectionState }
   | { kind: "activity"; activity: Activity }
-  | { kind: "forwarded"; name: string };
+  | { kind: "forwarded"; name: string }
+  /** The server finished a UI action it handles itself; its data model patches came first. */
+  | { kind: "actionDone"; name: string; surfaceId: string };
 
 type Listener = (event: ServerEvent) => void;
 const listeners = new Set<Listener>();
@@ -210,6 +212,7 @@ onAction((action) => {
   if (spikeMode) return; // spike fixtures are local only
   postAction(action, rendererDataModel())
     .then((r) => {
+      if (r.handled) publish({ kind: "actionDone", name: action.name, surfaceId: action.surfaceId });
       if (!r.forwarded) return;
       setActivity({ agentBusy: true });
       publish({ kind: "forwarded", name: action.name });

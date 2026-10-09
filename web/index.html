@@ -4,10 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f4f2ee" />
+    <meta name="theme-color" content="#dce3da" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&family=Unbounded:wght@500..700&display=swap"
+    />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232f6f5e'/%3E%3Cpath d='M16 2v28' stroke='%23f4f2ee' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23f4f2ee' stroke-width='2.5'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 3h20v25l-3.33-2.5-3.33 2.5L16 25.5l-3.33 2.5-3.34-2.5L6 28z' fill='%234a3aa8'/%3E%3Cpath d='M16 7v15' stroke='%23fff' stroke-width='2.5' stroke-dasharray='3 2.5'/%3E%3C/svg%3E"
     />
     <title>Split Bill · A2UI</title>
     <script>
@@ -18,7 +24,7 @@
           var dark = pref === "dark" || (pref !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
           if (pref === "light" || pref === "dark") document.documentElement.dataset.theme = pref;
           document.documentElement.classList.add(dark ? "a2ui-dark" : "a2ui-light");
-          document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#151413" : "#f4f2ee");
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#141c17" : "#dce3da");
         } catch (e) {}
       })();
     </script>
