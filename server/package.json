@@ -11,7 +11,8 @@
     "build": "tsc -p tsconfig.json",
     "count:prompt": "tsx scripts/count-prompt-tokens.ts",
     "smoke:s1": "tsx scripts/smoke-s1.ts",
-    "bench:s1": "tsx scripts/bench-s1.ts"
+    "bench:s1": "tsx scripts/bench-s1.ts",
+    "probe:dahl": "tsx scripts/probe-dahl.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
