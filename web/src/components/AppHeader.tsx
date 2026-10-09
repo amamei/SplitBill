@@ -5,7 +5,6 @@ import { ThemeToggle } from "./ThemeToggle";
 interface Props {
   subtitle?: string;
   offline?: boolean;
-  debugEnabled: boolean;
   debugOpen: boolean;
   debugErrors: number;
   onToggleDebug: () => void;
@@ -15,7 +14,7 @@ interface Props {
 }
 
 /** Sticky top bar: brand, connection state, activity bar, new-bill, theme and debug controls. */
-export function AppHeader({ subtitle = "A2UI v0.9", offline, debugEnabled, debugOpen, debugErrors, onToggleDebug, onNewBill, newBillDisabled }: Props) {
+export function AppHeader({ subtitle = "A2UI v0.9", offline, debugOpen, debugErrors, onToggleDebug, onNewBill, newBillDisabled }: Props) {
   const { pending, agentBusy } = useActivity();
   const working = pending > 0 || agentBusy;
   return (
@@ -49,24 +48,22 @@ export function AppHeader({ subtitle = "A2UI v0.9", offline, debugEnabled, debug
             </button>
           )}
           <ThemeToggle />
-          {debugEnabled && (
-            <button
-              type="button"
-              id="debug-toggle"
-              className="header-button"
-              aria-pressed={debugOpen}
-              aria-controls="debug-drawer"
-              onClick={onToggleDebug}
-              title="Отладка (Ctrl/⌘+Shift+D)"
-            >
-              Отладка
-              {debugErrors > 0 && (
-                <span className="count-badge" aria-label={`ошибок рендера: ${debugErrors}`}>
-                  {debugErrors}
-                </span>
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            id="debug-toggle"
+            className="header-button"
+            aria-pressed={debugOpen}
+            aria-controls="debug-drawer"
+            onClick={onToggleDebug}
+            title="Отладка (Ctrl/⌘+Shift+D)"
+          >
+            Отладка
+            {debugErrors > 0 && (
+              <span className="count-badge" aria-label={`ошибок рендера: ${debugErrors}`}>
+                {debugErrors}
+              </span>
+            )}
+          </button>
         </div>
       </div>
       <div className={`activity-bar${working ? " is-active" : ""}`} role="progressbar" aria-label="Выполняется запрос" aria-hidden={!working} />

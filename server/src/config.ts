@@ -1,4 +1,4 @@
-// Runtime configuration. Loads a2ui/.env (if present) once, before anything reads env.
+// Runtime configuration. Loads the project-root .env (if present) once, before anything reads env.
 // The agent runs on Claude (default; credentials from env or the `ant` CLI profile) or on a
 // local Ollama model through its Anthropic-compatible API (LLM_PROVIDER=ollama).
 import path from "node:path";
@@ -7,7 +7,7 @@ import { createScope } from "./log.js";
 
 const logger = createScope("config");
 const here = path.dirname(fileURLToPath(import.meta.url));
-// src/config.ts (tsx) and dist/config.js (build) both sit two levels below a2ui/.
+// src/config.ts (tsx) and dist/config.js (build) both sit two levels below the project root.
 const envPath = path.resolve(here, "../../.env");
 
 let envLoaded = false;

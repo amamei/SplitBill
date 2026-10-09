@@ -1,3 +1,6 @@
+---
+archived: 2026-10-04
+---
 # Implementation Plan: A2UI Split Bill — UI & UX polish (navigation and look)
 
 Branch: feature/a2ui-ui-ux-polish

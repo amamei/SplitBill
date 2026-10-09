@@ -10,8 +10,7 @@ import { Surfaces } from "./components/Surfaces";
 import { Toast, type ToastMessage } from "./components/Toast";
 import { spikeFixtures } from "./fixtures/spike";
 import { useDebugFeed } from "./lib/debugFeed";
-import { setDebugMode } from "./lib/debugMode";
-import { debug, info, isLogDebug } from "./lib/log";
+import { debug, info } from "./lib/log";
 import { MOBILE_QUERY, useMediaQuery } from "./lib/media";
 import { parseFlag, readPref, writePref } from "./lib/prefs";
 import { isEditableTarget, matchShortcut } from "./lib/shortcuts";
@@ -65,9 +64,8 @@ export function App() {
   const mobile = useMediaQuery(MOBILE_QUERY);
   const [pane, setPane] = useState<Pane>("chat");
   const [unseen, setUnseen] = useState<Record<Pane, boolean>>({ chat: false, bill: false });
-  const [debugEnabled, setDebugEnabled] = useState(isLogDebug);
   const [debugOpen, setDebugOpen] = useState(
-    () => isLogDebug() && (new URLSearchParams(location.search).get("log") === "open" || readPref("a2ui-debug-open", false, parseFlag)),
+    () => new URLSearchParams(location.search).get("log") === "open" || readPref("a2ui-debug-open", false, parseFlag),
   );
   const [toast, setToast] = useState<ToastMessage | null>(null);
   /** Bumped on every server reset: remounts Chat and Surfaces, dropping their local state. */
@@ -97,7 +95,8 @@ export function App() {
       setToast({
         id: nextToastId++,
         text: `Часть интерфейса не отрисовалась (${errors.length}). Подробности — в отладке.`,
-        ...(isLogDebug() ? { actionLabel: "Подробнее", onAction: () => openDebug(true) } : {}),
+        actionLabel: "Подробнее",
+        onAction: () => openDebug(true),
       }),
     [openDebug],
   );
@@ -153,10 +152,6 @@ export function App() {
           else return;
           break;
         case "toggleDebug":
-          if (!debugEnabled) {
-            setDebugMode(true);
-            setDebugEnabled(true);
-          }
           openDebug(!debugOpen);
           break;
         case "focusComposer":
@@ -174,7 +169,7 @@ export function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [confirmOpen, closeConfirm, debugEnabled, debugOpen, toast, openDebug, dismissToast, showPane]);
+  }, [confirmOpen, closeConfirm, debugOpen, toast, openDebug, dismissToast, showPane]);
 
   const handleNewBillConfirmed = useCallback(async () => {
     debug("app", "new bill confirmed");
@@ -193,7 +188,6 @@ export function App() {
     <AppHeader
       subtitle={spikeMode ? "A2UI v0.9 · spikes" : "A2UI v0.9"}
       offline={spikeMode}
-      debugEnabled={debugEnabled}
       debugOpen={debugOpen}
       debugErrors={debugFeed.renderErrors.length}
       onToggleDebug={() => openDebug(!debugOpen)}
@@ -203,7 +197,7 @@ export function App() {
   );
   const overlays = (
     <>
-      {debugEnabled && <DebugDrawer open={debugOpen} feed={debugFeed} onClose={() => openDebug(false)} />}
+      <DebugDrawer open={debugOpen} feed={debugFeed} onClose={() => openDebug(false)} />
       <Toast toast={toast} onDismiss={dismissToast} />
       <ConfirmDialog
         open={confirmOpen}

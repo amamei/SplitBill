@@ -1,3 +1,6 @@
+---
+archived: 2026-10-04
+---
 # Implementation Plan: A2UI Split Bill (hackathon participant #2)
 
 Branch: feature/a2ui-split-bill
