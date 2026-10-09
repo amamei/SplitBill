@@ -1,6 +1,6 @@
 // Pure conversions between the Anthropic-shaped agent (history, tools, usage, stop reasons) and
-// the OpenAI chat-completions wire format that the Dahl API speaks. No network here; the client
-// and tool loop live in ./dahl.ts.
+// the OpenAI chat-completions wire format that Dahl and Gemini speak. No network here; the client
+// and tool loop live in ./openai-compat.ts.
 import Anthropic from "@anthropic-ai/sdk";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { createScope } from "../log.js";
@@ -15,9 +15,11 @@ export interface OpenAiToolCall {
   function: { name: string; arguments: string };
 }
 
+export type OpenAiUserPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
 export type OpenAiMessage =
   | { role: "system"; content: string }
-  | { role: "user"; content: string }
+  | { role: "user"; content: string | OpenAiUserPart[] }
   | { role: "assistant"; content: string | null; tool_calls?: OpenAiToolCall[] }
   | { role: "tool"; tool_call_id: string; content: string };
 
@@ -35,11 +37,16 @@ export interface ToolDef {
 
 export type StopReason = "end_turn" | "tool_use" | "max_tokens" | "refusal";
 
-/** The history holds something a Dahl model cannot take (an image: no model has vision). */
+/** The history holds something the provider cannot take (an image, when images are not allowed). */
 export class UnsupportedContentError extends Error {
   constructor(readonly kind: string) {
-    super(`Dahl chat completions cannot take "${kind}" content`);
+    super(`chat completions cannot take "${kind}" content`);
   }
+}
+
+export interface ToOpenAiOptions {
+  /** Send image blocks as `image_url` parts (vision models); otherwise they throw. Default false. */
+  allowImages?: boolean;
 }
 
 type Block = { type: string; [key: string]: unknown };
@@ -66,22 +73,35 @@ function toolResultText(content: unknown): string {
     .join("\n");
 }
 
-function pushUser(out: OpenAiMessage[], content: BetaMessageParam["content"]): void {
+/** An Anthropic image source → the `image_url.url` OpenAI expects (a data: URL for base64). */
+function imageUrl(source: unknown): string {
+  const src = (source ?? {}) as { type?: unknown; media_type?: unknown; data?: unknown; url?: unknown };
+  if (src.type === "base64" && typeof src.media_type === "string" && typeof src.data === "string") return `data:${src.media_type};base64,${src.data}`;
+  if (src.type === "url" && typeof src.url === "string") return src.url;
+  throw new UnsupportedContentError(`image source ${String(src.type)}`);
+}
+
+function pushUser(out: OpenAiMessage[], content: BetaMessageParam["content"], opts: ToOpenAiOptions): void {
   if (typeof content === "string") {
     out.push({ role: "user", content });
     return;
   }
-  const texts: string[] = [];
+  const parts: OpenAiUserPart[] = [];
   const results: OpenAiMessage[] = [];
   for (const block of content as Block[]) {
-    if (block.type === "text") texts.push(String(block.text ?? ""));
+    if (block.type === "text") parts.push({ type: "text", text: String(block.text ?? "") });
     else if (block.type === "tool_result") {
       results.push({ role: "tool", tool_call_id: String(block.tool_use_id), content: toolResultText(block.content) });
+    } else if (block.type === "image" && opts.allowImages) {
+      parts.push({ type: "image_url", image_url: { url: imageUrl(block.source) } });
     } else throw new UnsupportedContentError(block.type);
   }
   // A `tool` message must directly follow the assistant message that issued the call.
   out.push(...results);
-  if (texts.length > 0) out.push({ role: "user", content: texts.join("\n\n") });
+  if (parts.length === 0) return;
+  // Text-only stays one plain string (what every server accepts); images need the parts array.
+  const hasImage = parts.some((p) => p.type === "image_url");
+  out.push({ role: "user", content: hasImage ? parts : parts.map((p) => (p.type === "text" ? p.text : "")).join("\n\n") });
 }
 
 /** Returns how many reasoning blocks were dropped. */
@@ -106,13 +126,13 @@ function pushAssistant(out: OpenAiMessage[], content: BetaMessageParam["content"
   return dropped;
 }
 
-/** Anthropic-shaped system prompt + history → OpenAI `messages`. Throws UnsupportedContentError on images. */
-export function toOpenAiMessages(system: string | undefined, history: BetaMessageParam[]): OpenAiMessage[] {
+/** Anthropic-shaped system prompt + history → OpenAI `messages`. Throws UnsupportedContentError on images unless allowed. */
+export function toOpenAiMessages(system: string | undefined, history: BetaMessageParam[], opts: ToOpenAiOptions = {}): OpenAiMessage[] {
   const out: OpenAiMessage[] = [];
   if (system) out.push({ role: "system", content: system });
   let dropped = 0;
   for (const message of history) {
-    if (message.role === "user") pushUser(out, message.content);
+    if (message.role === "user") pushUser(out, message.content, opts);
     else dropped += pushAssistant(out, message.content);
   }
   if (dropped > 0) logger.debug("dropped reasoning blocks from history", { dropped });
@@ -245,7 +265,7 @@ function partialTagSuffix(text: string, tag: string): string {
 }
 
 /**
- * Streaming remover of `<think>…</think>` spans (some Dahl models put their reasoning inline).
+ * Streaming remover of `<think>…</think>` spans (some models put their reasoning inline).
  * Handles tags split across chunks, drops an unterminated span, and trims the whitespace that
  * follows a closing tag. Only paired tags are handled.
  */

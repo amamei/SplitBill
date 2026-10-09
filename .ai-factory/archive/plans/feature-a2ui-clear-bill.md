@@ -1,3 +1,7 @@
+---
+archived: 2026-10-09
+---
+
 # Implementation Plan: "New bill" button — clear all data and start over
 
 Branch: feature/a2ui-clear-bill

@@ -1,9 +1,10 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { A2uiSurface, type ReactComponentImplementation } from "@a2ui/react/v0_9";
 import type { SurfaceModel } from "@a2ui/web_core/v0_9";
 import { subscribe } from "../a2ui/api";
 import { debug } from "../lib/log";
 import { safeAccent, surfaceTitle } from "../lib/surfaces";
+import { ItemEditorDialog } from "./ItemEditorDialog";
 
 type Surface = SurfaceModel<ReactComponentImplementation>;
 
@@ -21,6 +22,14 @@ const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(pre
 /** Titled container for one A2UI surface; extra surfaces can be collapsed or hidden locally. */
 export function SurfaceFrame({ surface, collapsed, isNew, onToggleCollapsed, onHide, bodyRef }: Props) {
   const frameRef = useRef<HTMLElement>(null);
+  const [bodyEl, setBodyEl] = useState<HTMLDivElement | null>(null);
+  const setBody = useCallback(
+    (el: HTMLDivElement | null) => {
+      bodyRef?.(el);
+      setBodyEl(el);
+    },
+    [bodyRef],
+  );
   const isBill = surface.id === "bill";
   const title = surfaceTitle(surface.id, surface.theme);
   const accent = safeAccent(surface.theme);
@@ -86,9 +95,10 @@ export function SurfaceFrame({ surface, collapsed, isNew, onToggleCollapsed, onH
           </div>
         )}
       </header>
-      <div className="a2ui-root surface-body" id={`surface-body-${surface.id}`} ref={bodyRef} hidden={collapsed}>
+      <div className="a2ui-root surface-body paper" id={`surface-body-${surface.id}`} ref={setBody} hidden={collapsed}>
         <A2uiSurface surface={surface} />
       </div>
+      {isBill && <ItemEditorDialog body={bodyEl} />}
     </section>
   );
 }

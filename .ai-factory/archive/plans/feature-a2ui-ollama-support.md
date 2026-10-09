@@ -1,3 +1,7 @@
+---
+archived: 2026-10-09
+---
+
 # Implementation Plan: Local Ollama models as an alternative agent backend
 
 Branch: feature/a2ui-ollama-support (created from `feature/a2ui-clear-bill`; the repo has no `main`)

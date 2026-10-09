@@ -6,7 +6,7 @@ import { readPref, writePref } from "./prefs";
 export type ThemePref = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
 
-export const THEME_COLORS: Record<ResolvedTheme, string> = { light: "#f4f2ee", dark: "#151413" };
+export const THEME_COLORS: Record<ResolvedTheme, string> = { light: "#dce3da", dark: "#141c17" };
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
 export function parseThemePref(raw: string): ThemePref | undefined {

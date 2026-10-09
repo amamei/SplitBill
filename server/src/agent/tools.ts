@@ -16,7 +16,7 @@ import {
 } from "../a2ui/envelopes.js";
 import { validateComponents } from "../a2ui/validate.js";
 import { DomainError } from "../domain/errors.js";
-import { formatMinor, parseMajor } from "../domain/money.js";
+import { formatMinor, parseMajor, toMajor } from "../domain/money.js";
 import type { Bill, Item, NewItem, Person, Split } from "../domain/types.js";
 import { diffViewModel } from "../projector/diff.js";
 import { splitText } from "../projector/project.js";
@@ -103,7 +103,15 @@ function billSnapshot(session: Session): Record<string, unknown> {
     total: formatMinor(summary.total),
     people: bill.people.map((p) => `${p.id} ${p.name}`),
     items: bill.items.map((i) => ({ id: i.id, title: i.title, price: formatMinor(i.price), paidBy: name(i.paidById), split: splitText(i.split, bill.people) })),
-    balances: summary.people.map((p) => ({ name: p.name, owes: formatMinor(p.owes), paid: formatMinor(p.paid), balance: formatMinor(p.balance, { sign: true }) })),
+    balances: summary.people.map((p) => ({
+      name: p.name,
+      owes: formatMinor(p.owes),
+      paid: formatMinor(p.paid),
+      balance: formatMinor(p.balance, { sign: true }),
+      // Raw numbers only for BarChart/PieChart "value"; texts above stay what the user sees.
+      owesValue: toMajor(p.owes),
+      paidValue: toMajor(p.paid),
+    })),
     transfers: summary.transfers.map((t) => `${name(t.fromId)} → ${name(t.toId)} ${formatMinor(t.amount)}`),
   };
 }
@@ -320,7 +328,7 @@ export function buildTools(session: Session) {
     ...betaZodTool({
       name: "render_surface",
       description:
-        'Render an A2UI v0.9 surface from basic-catalog components. surfaceId "bill" = the main bill UI bound to the server data model; any other id = a new screen with your own data. Re-rendering an existing id replaces it.',
+        'Render an A2UI v0.9 surface from basic-catalog components plus BarChart / PieChart. surfaceId "bill" = the main bill UI bound to the server data model; any other id = a new screen with your own data. Re-rendering an existing id replaces it.',
       inputSchema: RenderInput,
       run: (input, context?: BetaToolRunContext) => renderSurface(session, input, context?.toolUse.id),
     }),

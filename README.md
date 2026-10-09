@@ -2,13 +2,13 @@
 
 Приложение для дележа счёта из ТЗ хакатона ([`TZ.md`](TZ.md)), собранное на **Google A2UI v0.9**: агент (LLM) описывает интерфейс декларативным JSON из базового каталога компонентов, клиент рисует его нативно через `@a2ui/react`. Деньги считает код, модель только вызывает тулы и рисует результат.
 
-- Модель: по умолчанию `MiniMaxAI/MiniMax-M2.7` через [Dahl API](#модель-через-dahl-api-по-умолчанию) (меняется через `DAHL_MODEL`). Альтернативы: Claude `claude-opus-5-5` (`LLM_PROVIDER=anthropic`, `ANTHROPIC_MODEL`) и локальная модель через Ollama (`LLM_PROVIDER=ollama`, см. [ниже](#локальная-модель-через-ollama)).
-- Стек: тонкий TypeScript — Node + Express + `@anthropic-ai/sdk` (tool runner, стриминг, Claude/Ollama; к Dahl сервер ходит через `fetch` и тот же интерфейс tool runner) на сервере, Vite + React 19 + `@a2ui/react@0.12` / `@a2ui/web_core@0.12` на клиенте. ADK/A2A не используются.
+- Модель: по умолчанию `MiniMaxAI/MiniMax-M2.7` через [Dahl API](#модель-через-dahl-api-по-умолчанию) (меняется через `DAHL_MODEL`). Альтернативы: Claude `claude-opus-5-5` (`LLM_PROVIDER=anthropic`, `ANTHROPIC_MODEL`), Google Gemini (`LLM_PROVIDER=gemini`, см. [ниже](#модель-через-google-gemini)), любая модель из каталога OpenRouter (`LLM_PROVIDER=openrouter`, см. [ниже](#модель-через-openrouter)) и локальная модель через Ollama (`LLM_PROVIDER=ollama`, см. [ниже](#локальная-модель-через-ollama)).
+- Стек: тонкий TypeScript — Node + Express + `@anthropic-ai/sdk` (tool runner, стриминг, Claude/Ollama; к Dahl, Gemini и OpenRouter сервер ходит через `fetch` и тот же интерфейс tool runner) на сервере, Vite + React 19 + `@a2ui/react@0.12` / `@a2ui/web_core@0.12` на клиенте. ADK/A2A не используются.
 - Отчёт: [`REPORT.md`](REPORT.md). Сценарий демо: [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Запуск одной командой
 
-Нужны Node ≥ 22 и ключ Dahl API: впишите его в `.env` как `DAHL_API_KEY` (см. «Модель через Dahl API»). Claude (`LLM_PROVIDER=anthropic`: `ant auth login` или `ANTHROPIC_API_KEY`) и локальная модель (`LLM_PROVIDER=ollama`, см. «Локальная модель через Ollama») — альтернативы.
+Нужны Node ≥ 22 и ключ Dahl API: впишите его в `.env` как `DAHL_API_KEY` (см. «Модель через Dahl API»). Claude (`LLM_PROVIDER=anthropic`: `ant auth login` или `ANTHROPIC_API_KEY`), Gemini (`LLM_PROVIDER=gemini`), OpenRouter (`LLM_PROVIDER=openrouter` + `OPENROUTER_API_KEY`) и локальная модель (`LLM_PROVIDER=ollama`, см. «Локальная модель через Ollama») — альтернативы.
 
 ```bash
 cp .env.example .env          # затем впишите DAHL_API_KEY
@@ -68,6 +68,51 @@ npm -w server run smoke:s1            # S1 + S6 на Dahl, таблица PASS/F
 | «Фото чека» → 422 | у моделей Dahl нет vision | описать чек текстом или сменить провайдера |
 
 **Раньше по умолчанию был Claude.** Если ваш `.env` рассчитывал на это, добавьте `LLM_PROVIDER=anthropic` (переменные `ANTHROPIC_*` читаются только в этом режиме).
+
+## Модель через Google Gemini
+
+Gemini отдаёт OpenAI-совместимый API (`https://generativelanguage.googleapis.com/v1beta/openai`), поэтому сервер ходит к нему тем же адаптером, что и к Dahl: история и тулы остаются в формате Anthropic и конвертируются на каждый запрос. В отличие от Dahl, Gemini читает изображения — «Фото чека» (S9) работает.
+
+```bash
+# .env
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=…            # https://aistudio.google.com/apikey
+# GEMINI_MODEL=gemini-2.5-flash   # или gemini-2.5-pro
+```
+
+В логе при старте: `[config] resolved {… "provider":"gemini" …}` и `[agent.llm] gemini ready`, либо предупреждение `gemini preflight` (нет ключа, ключ не принят, модели нет в списке). `curl localhost:8787/api/health` → `{"provider":"gemini","model":"gemini-2.5-flash","vision":true}`.
+
+Ограничения: нет кэша промпта, effort и серверного fallback; аргументы тула могут прийти одним куском, тогда S10 покажет дерево целиком. Ошибки в чате: «Не задан GEMINI_API_KEY», «Gemini не принял ключ», «Модель … не найдена в Gemini» (404, поправьте `GEMINI_MODEL`), «Превышена квота … (429)», «Gemini временно недоступен».
+
+## Модель через OpenRouter
+
+OpenRouter — шлюз к моделям многих вендоров по одному ключу и с OpenAI-совместимым API (`https://openrouter.ai/api/v1`). Сервер ходит к нему тем же адаптером, что и к Dahl и Gemini. К каждому запросу добавляются заголовки атрибуции приложения (`HTTP-Referer`, `X-Title`). По умолчанию используется общая модель хакатона `anthropic/claude-opus-5.5` (ТЗ §3). Она читает изображения, поэтому «Фото чека» (S9) работает.
+
+```bash
+# .env
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=…                          # https://openrouter.ai/keys
+# OPENROUTER_MODEL=anthropic/claude-opus-5.5  # дешевле: google/gemini-2.5-flash
+```
+
+Список моделей: `curl https://openrouter.ai/api/v1/models` (без ключа) или https://openrouter.ai/models. Нужна модель с `tools` в `supported_parameters`. Для фото нужна модель с `image` в `architecture.input_modalities`.
+
+При старте сервер проверяет модель по публичному `/models`, а ключ — запросом `GET /key`. В логе будет `[config] resolved {… "provider":"openrouter" …}` и `[agent.llm] openrouter ready {tools, vision, limitRemaining, …}`. Если что-то не так, вместо этого появится предупреждение `openrouter preflight`: не задан ключ, ключ не принят, модели нет в списке, у модели нет `tools` или нет vision. `curl localhost:8787/api/health` → `{"provider":"openrouter","model":"anthropic/claude-opus-5.5","vision":true}`. `vision` здесь `true` для любой модели: для модели без картинок предупреждение есть только в логе, а загрузка фото закончится ошибкой модели.
+
+Ограничения:
+- Нет кэша промпта, effort, серверного fallback, выбора провайдера (`provider`), списка запасных моделей (`models`) и параметров reasoning.
+- Стоимость запроса не учитывается.
+- Аргументы тула могут прийти одним куском, тогда S10 покажет дерево целиком.
+
+Ошибки в чате:
+- «Не задан OPENROUTER_API_KEY».
+- «OpenRouter не принял ключ (401)».
+- «На счёте OpenRouter закончились кредиты (402)»: пополните баланс.
+- «OpenRouter отклонил запрос модерацией (403)».
+- «Модель … не найдена в OpenRouter» (404): поправьте `OPENROUTER_MODEL`.
+- «Модель … не поддерживает инструменты или изображения».
+- «Слишком много запросов к OpenRouter (429)».
+- «Провайдер модели в OpenRouter недоступен (5xx)»: 502 и 503 сервер сначала сам повторяет дважды.
 
 ## Локальная модель через Ollama
 
@@ -138,7 +183,7 @@ npm -w server run smoke:s1            # S1 + S6 на локальной моде
 
 ![Счёт на десктопе](docs/screenshots/desktop-light-bill.png)
 
-- **Две панели.** Слева чат с агентом, справа поверхности A2UI. Над поверхностями — липкая навигация: переключатель поверхностей («Счёт», «Диаграмма 1», …) и оглавление разделов счёта («Участники · Позиции · Редактор позиции · Итог»). Оглавление строится из заголовков карточек, которые нарисовала модель.
+- **Две панели.** Слева чат с агентом, справа поверхности A2UI. Над поверхностями — липкая навигация: переключатель поверхностей («Счёт», «Диаграмма 1», …) и оглавление разделов счёта («Участники · Позиции · Итог»). Оглавление строится из заголовков карточек, которые нарисовала модель. По тем же заголовкам клиент раскладывает разделы отдельными блоками (на широком экране «Итог» — справа) и показывает карточку «Редактор позиции» диалогом: она открывается по «Открыть», новой позиции или «Исправить» и закрывается после успешного «Сохранить», по Esc или ✕ (`web/src/components/ItemEditorDialog.tsx`).
 - **Телефон (< 860 px).** Одна панель за раз, внизу вкладки «Чат / Счёт»; точка на вкладке — там есть обновления. После первого счёта приложение само переключается на «Счёт». Строки поверхности переносятся (container query), горизонтальной прокрутки нет.
 - **Тема.** Системная / светлая / тёмная — переключатель в шапке, выбор запоминается в браузере.
 - **Новый счёт.** Кнопка в шапке (на узком экране — только иконка) после подтверждения стирает на сервере счёт, переписку с моделью и лог сообщений; чат и панель счёта возвращаются к пустому экрану во всех вкладках этой сессии. Тема и настройки отладки остаются. Пока агент отвечает, кнопка недоступна.
@@ -199,10 +244,16 @@ SSE /api/events: a2ui | chat | status (токены, задержки, счёт�
 
 | Переменная | По умолчанию | Что делает |
 |---|---|---|
-| `LLM_PROVIDER` | `dahl` | `dahl` — Dahl API, `anthropic` — Claude, `ollama` — локальная модель (см. «Локальная модель через Ollama») |
+| `LLM_PROVIDER` | `dahl` | `dahl` — Dahl API, `gemini` — Google Gemini, `openrouter` — OpenRouter, `anthropic` — Claude, `ollama` — локальная модель (см. «Локальная модель через Ollama») |
 | `DAHL_API_KEY` | — | ключ Dahl API (секрет); без него чат отвечает ошибкой |
 | `DAHL_MODEL` | `MiniMaxAI/MiniMax-M2.7` | модель Dahl (список — `GET /v1/models`) |
 | `DAHL_BASE_URL` | `https://inference.dahl.global/v1` | адрес OpenAI-совместимого API Dahl |
+| `GEMINI_API_KEY` | — | ключ Gemini API из Google AI Studio (секрет; подходит и `GOOGLE_API_KEY`), нужен при `LLM_PROVIDER=gemini` |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | модель Gemini |
+| `GEMINI_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai` | адрес OpenAI-совместимого API Gemini |
+| `OPENROUTER_API_KEY` | — | ключ OpenRouter (секрет), нужен при `LLM_PROVIDER=openrouter` |
+| `OPENROUTER_MODEL` | `anthropic/claude-opus-5.5` | модель OpenRouter (id вида `vendor/model`, список — `GET /api/v1/models`) |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | адрес OpenAI-совместимого API OpenRouter |
 | `OLLAMA_MODEL` | — | модель Ollama, обязательна при `LLM_PROVIDER=ollama` (например `qwen3.6:35b-a3b-q4_K_M`) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | адрес сервера Ollama |
 | `ANTHROPIC_MODEL` | `claude-opus-5-5` | модель агента при `LLM_PROVIDER=anthropic` |

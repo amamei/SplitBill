@@ -52,8 +52,8 @@ describe("our envelopes", () => {
       const e = createSurface(id, { theme: surfaceTheme(id) });
       assert.deepEqual(validateEnvelope(e), { ok: true }, id);
     }
-    assert.deepEqual(surfaceTheme("bill"), { primaryColor: "#2f6f5e", agentDisplayName: "Split Bill" });
-    assert.deepEqual(surfaceTheme("chart-1"), { primaryColor: "#2f6f5e" });
+    assert.deepEqual(surfaceTheme("bill"), { primaryColor: "#4a3aa8", agentDisplayName: "Split Bill" });
+    assert.deepEqual(surfaceTheme("chart-1"), { primaryColor: "#4a3aa8" });
   });
 
   it("a valid tree with a template passes", () => {
@@ -83,6 +83,31 @@ describe("rejections with readable errors", () => {
 
   it("orphan component", () => {
     assert.match(errorsOf(validateComponents([...tree(), { id: "lost", component: "Text", text: "?" }])), /not reachable from "root": lost/);
+  });
+
+  it("a Button label also listed in a Row renders twice", () => {
+    const t = tree();
+    t[3] = { id: "row", component: "Row", children: ["row_title", "row_btn_label", "row_btn"] };
+    assert.match(errorsOf(validateComponents(t)), /"row_btn_label" is placed by "row" and "row_btn", so it renders 2 times/);
+  });
+
+  it("bill: a payer template without the person's name", () => {
+    const payer = (label: Array<Record<string, unknown>>) => [
+      { id: "root", component: "Column", children: ["payers"] },
+      { id: "payers", component: "List", children: { componentId: "payer_btn", path: "/editor/payerOptions" } },
+      { id: "payer_btn", component: "Button", child: "payer_lbl", action: { event: { name: "set_payer", context: { personId: { path: "id" } } } } },
+      ...label,
+    ];
+    const markOnly = payer([{ id: "payer_lbl", component: "Text", text: { path: "markText" } }]);
+    assert.match(errorsOf(validateComponents(markOnly, { surfaceId: "bill" })), /payerOptions template must show each person's name/);
+    // Other surfaces may bind whatever they like.
+    assert.deepEqual(validateComponents(markOnly, { surfaceId: "chart-1" }), { ok: true });
+    const withName = payer([
+      { id: "payer_lbl", component: "Row", children: ["payer_mark", "payer_name"] },
+      { id: "payer_mark", component: "Text", text: { path: "markText" } },
+      { id: "payer_name", component: "Text", text: { path: "name" } },
+    ]);
+    assert.deepEqual(validateComponents(withName, { surfaceId: "bill" }), { ok: true });
   });
 
   it('unknown component "Chart"', () => {
@@ -126,5 +151,43 @@ describe("rejections with readable errors", () => {
       { id: "l", component: "Text", text: "ok" },
     ];
     assert.match(errorsOf(validateComponents(t)), /event name must be a non-empty string/);
+  });
+});
+
+describe("chart components", () => {
+  const items = [
+    { label: "Аня", value: 1400, displayText: "1400.00 MDL" },
+    { label: "Гена", value: 0, displayText: "0.00 MDL" },
+  ];
+  const chartTree = (chart: Record<string, unknown>) => [
+    { id: "root", component: "Column", children: ["chart"] },
+    { id: "chart", ...chart },
+  ];
+
+  it("BarChart and PieChart with literal or bound items pass", () => {
+    assert.deepEqual(validateComponents(chartTree({ component: "BarChart", title: "Кто сколько заплатил", items })), { ok: true });
+    assert.deepEqual(validateComponents(chartTree({ component: "PieChart", donut: true, items })), { ok: true });
+    assert.deepEqual(validateComponents(chartTree({ component: "BarChart", items: { path: "/paid" }, weight: 1 })), { ok: true });
+  });
+
+  it("are listed among the allowed components", () => {
+    const t = tree();
+    t[1] = { id: "title", component: "Chart", text: "x" } as never;
+    assert.match(errorsOf(validateComponents(t)), /allowed: .*BarChart, PieChart/);
+  });
+
+  it("reject negative values, missing displayText and unknown properties", () => {
+    const text = errorsOf(
+      validateComponents(chartTree({ component: "BarChart", items: [{ label: "Аня", value: -5 }], legend: true })),
+    );
+    assert.match(text, /must be >= 0/);
+    assert.match(text, /missing required property "displayText"/);
+    assert.match(text, /unknown property "legend"/);
+  });
+
+  it("reject an empty items array and a non-hex colour", () => {
+    assert.equal(validateComponents(chartTree({ component: "PieChart", items: [] })).ok, false);
+    const bad = [{ label: "Аня", value: 1, displayText: "1", color: "red" }];
+    assert.match(errorsOf(validateComponents(chartTree({ component: "PieChart", items: bad }))), /must match pattern/);
   });
 });

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://splitbill.local/a2ui/v0_9/custom_components.json",
+  "title": "SplitBill custom A2UI components",
+  "description": "Project-owned chart components added next to the vendored basic catalog. Not part of the upstream A2UI spec; kept outside spec/v0_9 so the vendored files stay verbatim (see spec/v0_9/SOURCE.md). The web renderer mirrors these in web/src/a2ui/charts.tsx.",
+  "$defs": {
+    "ChartItem": {
+      "type": "object",
+      "description": "One labelled value of a chart, e.g. one person's amount.",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "What the value belongs to, e.g. a person's name."
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "A non-negative number that sets the bar length / slice size. Copy it verbatim from get_summary; never compute it."
+        },
+        "displayText": {
+          "type": "string",
+          "description": "Preformatted text shown next to the item, e.g. \"1400.00 MDL\"."
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Optional #RRGGBB override. Omit it: the renderer assigns a colour-blind-safe palette by position."
+        }
+      },
+      "required": ["label", "value", "displayText"],
+      "additionalProperties": false
+    },
+    "ChartItems": {
+      "description": "A literal array of chart items, or a binding to such an array in the data model.",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ChartItem" },
+          "minItems": 1
+        },
+        { "$ref": "https://a2ui.org/specification/v0_9/common_types.json#/$defs/DataBinding" }
+      ]
+    }
+  },
+  "components": {
+    "BarChart": {
+      "type": "object",
+      "description": "Horizontal bars comparing non-negative amounts, e.g. who paid how much. Each bar is labelled with its label and displayText.",
+      "allOf": [
+        { "$ref": "https://a2ui.org/specification/v0_9/common_types.json#/$defs/ComponentCommon" },
+        { "$ref": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json#/$defs/CatalogComponentCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "component": { "const": "BarChart" },
+            "title": {
+              "$ref": "https://a2ui.org/specification/v0_9/common_types.json#/$defs/DynamicString",
+              "description": "Optional caption above the bars."
+            },
+            "items": { "$ref": "#/$defs/ChartItems" }
+          },
+          "required": ["component", "items"]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "PieChart": {
+      "type": "object",
+      "description": "Shares of a whole as a pie or donut with a legend, e.g. each person's share of the total.",
+      "allOf": [
+        { "$ref": "https://a2ui.org/specification/v0_9/common_types.json#/$defs/ComponentCommon" },
+        { "$ref": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json#/$defs/CatalogComponentCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "component": { "const": "PieChart" },
+            "title": {
+              "$ref": "https://a2ui.org/specification/v0_9/common_types.json#/$defs/DynamicString",
+              "description": "Optional caption above the chart."
+            },
+            "donut": {
+              "type": "boolean",
+              "default": false,
+              "description": "true draws a ring with a hollow centre; false a full pie."
+            },
+            "items": { "$ref": "#/$defs/ChartItems" }
+          },
+          "required": ["component", "items"]
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

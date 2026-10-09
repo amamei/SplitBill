@@ -33,12 +33,15 @@
   --a2ui-row-gap: var(--space-2);
   --a2ui-column-gap: var(--space-2);
   --a2ui-list-gap: var(--space-1);
-  --a2ui-card-background: var(--panel);
-  --a2ui-card-border: 1px solid var(--line);
-  --a2ui-card-border-radius: var(--radius-l);
-  --a2ui-card-box-shadow: var(--shadow-1);
-  --a2ui-card-padding: var(--space-4);
-  --a2ui-card-margin: 0 0 var(--space-4) 0;
+  /* Surfaces sit on paper (shell.css .paper): a top-level Card is a section of the receipt,
+     opened by a dashed perforation line rather than boxed. */
+  --perforation: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 11px) top left / 100% 2px no-repeat;
+  --a2ui-card-background: var(--perforation);
+  --a2ui-card-border: 0;
+  --a2ui-card-border-radius: 0;
+  --a2ui-card-box-shadow: none;
+  --a2ui-card-padding: var(--space-5) 0 var(--space-2);
+  --a2ui-card-margin: var(--space-2) 0 0 0;
   --a2ui-checkbox-margin: 2px 0;
   --a2ui-checkbox-size: 18px;
   --a2ui-checkbox-label-font-weight: 500;
@@ -67,34 +70,50 @@
 .a2ui-root h5 {
   margin: 0;
 }
-.a2ui-root h1 { font-size: var(--font-size-xl); letter-spacing: -0.015em; }
-.a2ui-root h2 { font-size: 1.25rem; letter-spacing: -0.01em; }
-.a2ui-root h3 { font-size: var(--font-size-l); letter-spacing: -0.005em; }
-.a2ui-root h4 { font-size: var(--font-size-m); }
+.a2ui-root h1,
+.a2ui-root h2,
+.a2ui-root h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.2; }
+.a2ui-root h1 { font-size: 1.75rem; letter-spacing: -0.03em; }
+.a2ui-root h2 { font-size: 1.5rem; letter-spacing: -0.025em; }
+.a2ui-root h3 { font-size: var(--font-size-m); letter-spacing: -0.015em; }
+.a2ui-root h4 { font-size: var(--font-size-m); font-weight: 600; }
 .a2ui-root h5 { font-size: var(--font-size-s); font-weight: 600; }
 .a2ui-root .body p { line-height: 1.45; }
 .a2ui-root .body p + p { margin-top: var(--space-2); }
 .a2ui-root .body a { color: var(--accent); }
 .a2ui-root .body code { font-family: var(--font-mono); font-size: 0.9em; padding: 1px 4px; border-radius: 4px; background: var(--panel-2); }
 
-/* Card title: the first heading of a card. */
+/* Card title: the first heading of a card. The perforation above already separates sections. */
 .a2ui-card > :is(.h2, .h3, .h4):first-child > :is(h2, h3, h4),
 .a2ui-card > * > :is(.h2, .h3, .h4):first-child > :is(h2, h3, h4) {
-  padding-bottom: var(--space-2);
   margin-bottom: var(--space-1);
-  border-bottom: 1px solid var(--line);
+}
+
+/* Receipt head: the first row of a surface (bill title · total). The total gets a highlighter stroke. */
+.a2ui-root > div > div[style*="flex-direction: row"]:first-child { align-items: baseline !important; }
+.a2ui-root > div > div[style*="flex-direction: row"]:first-child > :is(.h2, .h3):last-child:not(:first-child) > :is(h2, h3) {
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  padding: 0 6px;
+  margin-right: -6px;
+  background: linear-gradient(transparent 52%, var(--marker) 52% 92%, transparent 92%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 /* A Card inside a Card is a sub-panel; in a Row it is usually a bar (S7 charts built from Card weights). */
 .a2ui-card .a2ui-card {
-  background: var(--accent-soft) !important;
+  background: var(--panel-2) !important;
   border-color: transparent !important;
+  border-radius: var(--radius-m) !important;
   box-shadow: none !important;
+  padding: var(--space-3) !important;
   margin: 0 !important;
 }
 .a2ui-card div[style*="flex-direction: row"] > .a2ui-card {
   background: var(--accent) !important;
   min-height: 22px;
+  padding: 0 !important;
   border-radius: var(--radius-s) !important;
 }
 
@@ -113,14 +132,15 @@
   min-height: 34px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-m);
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
+  border: 1px solid transparent;
+  background: var(--panel-2);
   color: var(--page-fg);
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 120ms, border-color 120ms, color 120ms, transform 60ms;
 }
-.a2ui-root button:not(.chip):not(.a2ui-tab-button):not(.a2ui-modal-close):hover:not(:disabled) { border-color: var(--accent); }
+.a2ui-root button:not(.chip):not(.a2ui-tab-button):not(.a2ui-modal-close):hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
 .a2ui-root button:not(.chip):not(.a2ui-tab-button):not(.a2ui-modal-close):active:not(:disabled) { transform: translateY(1px); }
 .a2ui-root button:disabled { opacity: 0.5; cursor: default; }
 .a2ui-root button p { margin: 0; }
@@ -143,7 +163,7 @@
 
 /* ChoicePicker chips and Tabs. */
 .a2ui-root button.chip {
-  min-height: 30px;
+  min-height: 32px;
   padding: 0 var(--space-3);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-pill);
@@ -163,17 +183,17 @@
 .a2ui-root select {
   font-size: var(--font-size-s);
   min-height: 34px;
-  padding: 6px var(--space-2);
-  border-radius: var(--radius-s);
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-m);
+  border: 1px solid transparent;
+  background: var(--panel-2);
   color: var(--page-fg);
   min-width: 0;
   width: 100%;
-  transition: border-color 120ms;
+  transition: border-color 120ms, background-color 120ms;
 }
 .a2ui-root input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):hover,
-.a2ui-root textarea:hover { border-color: var(--muted); }
+.a2ui-root textarea:hover { border-color: var(--line-strong); }
 .a2ui-root input::placeholder,
 .a2ui-root textarea::placeholder { color: var(--muted); opacity: 0.8; }
 .a2ui-root input:focus,
@@ -182,6 +202,7 @@
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   border-color: transparent;
+  background: var(--panel);
 }
 .a2ui-root input:invalid,
 .a2ui-root [aria-invalid="true"] { border-color: var(--danger) !important; }
@@ -196,8 +217,22 @@
   font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--muted);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
+
+/* A list of identical editors ("Имя", "Имя", …) labels only its first row; the rest keep the
+   label for screen readers. */
+.a2ui-root div[style*="overflow"] > div[style*="flex-direction: row"] ~ div[style*="flex-direction: row"] label:has(+ input:not([type="checkbox"]):not([type="radio"]):not([type="range"])) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+/* Buttons beside a labelled field line up with the field, not the label. */
+.a2ui-root div[style*="flex-direction: row"]:has(> div > label + input) { align-items: flex-end !important; }
 
 /* ---------- lists and rows ---------- */
 
@@ -243,7 +278,119 @@
     white-space: normal;
   }
   .a2ui-root {
-    --a2ui-card-padding: var(--space-3);
+    --a2ui-card-padding: var(--space-4) 0 var(--space-2);
+  }
+}
+
+/* ---------- bill: the title on the table, each section its own slip ---------- */
+
+/* The bill frame is not one sheet: its sections are (shell.css .paper is for other surfaces). */
+.surface-frame--bill > .paper {
+  padding: 0;
+  margin: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.surface-frame--bill > .paper::after { content: none; }
+
+.surface-frame--bill .a2ui-root > div {
+  --tooth: 9px;
+  --a2ui-card-background: var(--panel);
+  --a2ui-card-border-radius: var(--radius-s) var(--radius-s) 0 0;
+  --a2ui-card-box-shadow: var(--shadow-paper);
+  --a2ui-card-padding: var(--space-5);
+  --a2ui-card-margin: 0 0 var(--tooth) 0;
+  gap: var(--space-4) !important;
+}
+.surface-frame--bill .a2ui-root > div > .a2ui-card { position: relative; }
+
+/* Bill title and total sit on the table, above the slips. */
+.surface-frame--bill .a2ui-root > div > div[style*="flex-direction: row"]:first-child { padding: var(--space-1) var(--space-1) 0; }
+.surface-frame--bill .a2ui-root > div > div[style*="flex-direction: row"]:first-child h2 { font-size: 1.75rem; }
+
+/* Line items and summary rows: a dashed rule between entries, as on a printed receipt, so a
+   row's second line (payer, split, «Открыть», «Напомнить») reads as part of its entry. */
+.surface-frame--bill :is([data-section="items"], [data-section="summary"]) div[style*="overflow"] > * + * {
+  border-top: 1px dashed var(--line-strong);
+  padding-top: var(--space-2);
+}
+.surface-frame--bill :is([data-section="items"], [data-section="summary"]) div[style*="overflow"] { gap: var(--space-2) !important; }
+
+/* The error area renders empty most of the time; don't let it hold a gap open. */
+.surface-frame--bill .a2ui-root > div > div[style*="flex-direction: column"]:not(:has(p, button, input, h3, h4, h5, em:not(:empty))),
+.surface-frame--bill .a2ui-root > div > .body:empty,
+.surface-frame--bill .a2ui-root > div > span:has(> em:empty) { display: none !important; }
+
+/* Wide bill: lists on the left, the totals beside them and in view while scrolling. */
+@container (min-width: 760px) {
+  .surface-frame--bill .a2ui-root > div {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-auto-flow: row dense;
+    align-items: start !important;
+    column-gap: var(--space-4) !important;
+  }
+  .surface-frame--bill .a2ui-root > div > * { grid-column: 1 / -1; }
+  .surface-frame--bill .a2ui-root > div > :is([data-section="people"], [data-section="items"]) { grid-column: 1; }
+  .surface-frame--bill .a2ui-root > div > [data-section="summary"] {
+    grid-column: 2;
+    grid-row: span 2;
+    position: sticky !important;
+    top: calc(var(--header-h) + 80px);
+  }
+}
+@container (max-width: 640px) {
+  .surface-frame--bill .a2ui-root > div { --a2ui-card-padding: var(--space-4); }
+  /* The summary is a table: its columns stay columns instead of wrapping into a staircase. */
+  .surface-frame--bill [data-section="summary"] div[style*="flex-direction: row"] { flex-wrap: nowrap !important; column-gap: var(--space-2) !important; }
+  .surface-frame--bill [data-section="summary"] div[style*="flex-direction: row"] > [style*="flex:"] { min-width: 0 !important; }
+  /* A participant's name gets the whole line; rename and remove sit together under it. */
+  .surface-frame--bill [data-section="people"] div[style*="overflow"] > div[style*="flex-direction: row"] > div:has(> input) { flex-basis: 100% !important; }
+}
+
+/* ---------- item editor: a dialog, not a section (ItemEditorDialog) ---------- */
+
+.surface-frame--bill [data-section="editor"] { display: none !important; }
+.surface-body[data-editor-open] [data-section="editor"] {
+  --a2ui-card-border-radius: var(--radius-l);
+  --a2ui-card-box-shadow: var(--shadow-2);
+  --a2ui-card-margin: 0;
+  --a2ui-card-padding: var(--space-5);
+  display: block !important;
+  position: fixed !important;
+  z-index: 61;
+  top: 50%;
+  left: 50%;
+  width: min(560px, calc(100vw - var(--space-4) * 2));
+  max-height: min(88dvh, 820px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translate(-50%, -50%);
+  animation: sheet-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* Room for the close button beside the title. */
+.surface-body[data-editor-open] [data-section="editor"] :is(h2, h3, h4):first-of-type { padding-right: 44px; }
+
+@keyframes sheet-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 16px)); }
+}
+
+/* Phones: a bottom sheet. */
+@media (max-width: 859.98px) {
+  .surface-body[data-editor-open] [data-section="editor"] {
+    --a2ui-card-border-radius: var(--radius-l) var(--radius-l) 0 0;
+    --a2ui-card-padding: var(--space-4) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom));
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 90dvh;
+    transform: none;
+    animation-name: sheet-up;
+  }
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
   }
 }
 
@@ -266,3 +413,25 @@
   from { background-position: 100% 0; }
   to { background-position: -100% 0; }
 }
+
+/* ---- BarChart / PieChart (a2ui/charts.tsx) ---- */
+.a2ui-chart { margin: 0; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.a2ui-chart__title { font-size: var(--font-size-s); font-weight: 600; color: var(--page-fg); }
+.a2ui-chart__empty { font-size: var(--font-size-s); color: var(--muted); }
+.a2ui-chart__label { color: var(--page-fg); font-size: var(--font-size-s); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a2ui-chart__value { color: var(--page-fg); font-size: var(--font-size-s); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.a2ui-chart__share { color: var(--muted); }
+
+.a2ui-chart__bars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(3.5rem, max-content) 1fr max-content; column-gap: var(--space-3); row-gap: var(--space-2); align-items: center; }
+.a2ui-chart__bar-row { display: contents; }
+.a2ui-chart__track { height: 14px; border-radius: 4px; background: var(--chart-track); overflow: hidden; }
+.a2ui-chart__bar { display: block; height: 100%; border-radius: 0 4px 4px 0; min-width: 2px; transition: width 240ms ease-out; }
+.a2ui-chart__bar[style*="width: 0%"] { min-width: 0; }
+
+.a2ui-chart__pie { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4) var(--space-5); }
+.a2ui-chart__pie svg { flex: none; max-width: 100%; height: auto; }
+.a2ui-chart__legend { list-style: none; margin: 0; padding: 0; flex: 1 1 12rem; min-width: 0; display: grid; grid-template-columns: 12px minmax(0, 1fr) max-content; column-gap: var(--space-2); row-gap: var(--space-2); align-items: center; }
+.a2ui-chart__legend li { display: contents; }
+.a2ui-chart__swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) { .a2ui-chart__bar { transition: none; } }

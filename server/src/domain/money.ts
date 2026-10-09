@@ -34,6 +34,11 @@ export function parseMajor(input: string | number): number {
   return result;
 }
 
+/** 120000 → 1200 (a plain number for chart proportions, never for further arithmetic). */
+export function toMajor(n: number): number {
+  return n / MINOR_PER_MAJOR;
+}
+
 /** 120000 → "1200.00"; with `sign: true` → "+1200.00" / "−405.00" / "0.00". */
 export function formatMinor(n: number, opts: { sign?: boolean } = {}): string {
   if (!Number.isInteger(n)) throw new Error(`formatMinor expects an integer, got ${n}`);

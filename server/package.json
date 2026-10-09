@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/http/server.ts",
+    "dev": "tsx watch --include ../.env src/http/server.ts",
     "start": "tsx src/http/server.ts",
     "test": "LOG_LEVEL=error node --import tsx --test \"src/**/__tests__/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",

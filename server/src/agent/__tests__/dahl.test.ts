@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import Anthropic from "@anthropic-ai/sdk";
 import type { LlmConfig } from "../../config.js";
 import { createDahlClient, DahlApiError, DahlConnectionError, DahlMissingKeyError, UnsupportedContentError, type DahlClientOptions } from "../dahl.js";
+import { createOpenAiCompatClient } from "../openai-compat.js";
 import { runTurn } from "../runner.js";
 import { buildTools } from "../tools.js";
 import { controlSession } from "./helpers.js";
@@ -95,6 +96,32 @@ async function drain(runner: Any): Promise<Array<{ events: Any[]; final: Any }>>
 }
 
 const eventTypes = (events: Any[]) => events.map((e) => `${e.type}${e.delta ? `:${e.delta.type}` : ""}@${e.index}`);
+
+// --- provider profile -------------------------------------------------------------------
+
+describe("createOpenAiCompatClient: profile headers", () => {
+  it("sends the profile's extra headers but never lets them override auth or content type", async () => {
+    const { impl, calls } = fakeFetch(ok(sse(text("ok"), finish("stop")).concat(["data: [DONE]\n\n"])));
+    const c = createOpenAiCompatClient(
+      LLM,
+      {
+        label: "test",
+        apiKey: () => undefined,
+        allowImages: false,
+        headers: { "X-Title": "t", authorization: "evil", "content-type": "text/plain" },
+        errors: { api: DahlApiError, connection: DahlConnectionError, missingKey: DahlMissingKeyError },
+      },
+      { apiKey: KEY, fetchImpl: impl, backoffMs: [0, 0] },
+    );
+    await drain(runnerOf(c));
+
+    const headers = calls[0].init.headers as Record<string, string>;
+    assert.equal(headers["X-Title"], "t");
+    assert.equal(headers.authorization, `Bearer ${KEY}`);
+    assert.equal(headers["content-type"], "application/json");
+    assert.equal(headers.accept, "text/event-stream");
+  });
+});
 
 // --- text turns --------------------------------------------------------------------------
 

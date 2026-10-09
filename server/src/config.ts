@@ -1,7 +1,9 @@
 // Runtime configuration. Loads the project-root .env (if present) once, before anything reads env.
 // The agent runs on the Dahl inference API (default; OpenAI-compatible, key in DAHL_API_KEY), on
-// Claude (LLM_PROVIDER=anthropic; credentials from env or the `ant` CLI profile) or on a local
-// Ollama model through its Anthropic-compatible API (LLM_PROVIDER=ollama).
+// Claude (LLM_PROVIDER=anthropic; credentials from env or the `ant` CLI profile), on a local
+// Ollama model through its Anthropic-compatible API (LLM_PROVIDER=ollama), on Google Gemini
+// through its OpenAI-compatible API (LLM_PROVIDER=gemini, key in GEMINI_API_KEY) or on any
+// OpenRouter model through its OpenAI-compatible API (LLM_PROVIDER=openrouter, key in OPENROUTER_API_KEY).
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createScope } from "./log.js";
@@ -22,25 +24,47 @@ try {
 export type CredentialSource =
   | "env:DAHL_API_KEY"
   | "dahl:missing-key"
+  | "env:GEMINI_API_KEY"
+  | "env:GOOGLE_API_KEY"
+  | "gemini:missing-key"
+  | "env:OPENROUTER_API_KEY"
+  | "openrouter:missing-key"
   | "env:ANTHROPIC_API_KEY"
   | "env:ANTHROPIC_AUTH_TOKEN"
   | "ant-profile"
   | "ollama:none";
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 
-/** The Dahl API key is deliberately not part of LlmConfig: config objects get logged. See dahlApiKey(). */
+/** API keys are deliberately not part of LlmConfig: config objects get logged. See dahlApiKey() / geminiApiKey() / openRouterApiKey(). */
 export type LlmConfig =
   | { provider: "dahl"; model: string; baseURL: string }
+  | { provider: "gemini"; model: string; baseURL: string }
+  | { provider: "openrouter"; model: string; baseURL: string }
   | { provider: "anthropic"; model: string; effort: Effort; fallbacks: boolean }
   | { provider: "ollama"; model: string; baseURL: string };
 
 export const DEFAULT_DAHL_BASE_URL = "https://inference.dahl.global/v1";
 export const DEFAULT_DAHL_MODEL = "MiniMaxAI/MiniMax-M2.7";
 export const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
+export const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
+export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+export const DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+/** The shared hackathon model (TZ §3) through OpenRouter; OPENROUTER_MODEL picks any other. */
+export const DEFAULT_OPENROUTER_MODEL = "anthropic/claude-opus-5.5";
 
 /** The Dahl API key, trimmed; blank counts as missing. A missing key is not fatal (see agent/llm.ts). */
 export function dahlApiKey(env: NodeJS.ProcessEnv = process.env): string | undefined {
   return env.DAHL_API_KEY?.trim() || undefined;
+}
+
+/** The Gemini API key (GEMINI_API_KEY, else GOOGLE_API_KEY), trimmed; blank counts as missing. */
+export function geminiApiKey(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  return env.GEMINI_API_KEY?.trim() || env.GOOGLE_API_KEY?.trim() || undefined;
+}
+
+/** The OpenRouter API key, trimmed; blank counts as missing. */
+export function openRouterApiKey(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  return env.OPENROUTER_API_KEY?.trim() || undefined;
 }
 
 /** Pure: env → provider settings. Throws on an unknown provider or a missing OLLAMA_MODEL. */
@@ -67,7 +91,17 @@ export function resolveLlmConfig(env: NodeJS.ProcessEnv): LlmConfig {
     const baseURL = (env.OLLAMA_BASE_URL?.trim() || DEFAULT_OLLAMA_BASE_URL).replace(/\/+$/, "");
     return { provider: "ollama", model, baseURL };
   }
-  throw new Error(`LLM_PROVIDER must be "dahl", "anthropic" or "ollama", got "${env.LLM_PROVIDER}"`);
+  if (raw === "gemini") {
+    const model = env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
+    const baseURL = (env.GEMINI_BASE_URL?.trim() || DEFAULT_GEMINI_BASE_URL).replace(/\/+$/, "");
+    return { provider: "gemini", model, baseURL };
+  }
+  if (raw === "openrouter") {
+    const model = env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL;
+    const baseURL = (env.OPENROUTER_BASE_URL?.trim() || DEFAULT_OPENROUTER_BASE_URL).replace(/\/+$/, "");
+    return { provider: "openrouter", model, baseURL };
+  }
+  throw new Error(`LLM_PROVIDER must be "dahl", "anthropic", "ollama", "gemini" or "openrouter", got "${env.LLM_PROVIDER}"`);
 }
 
 const llm = resolveLlmConfig(process.env);
@@ -92,6 +126,11 @@ export const config = {
 /** Label only — never the secret itself. */
 export function credentialSource(): CredentialSource {
   if (config.llm.provider === "dahl") return dahlApiKey() ? "env:DAHL_API_KEY" : "dahl:missing-key";
+  if (config.llm.provider === "gemini") {
+    if (process.env.GEMINI_API_KEY?.trim()) return "env:GEMINI_API_KEY";
+    return process.env.GOOGLE_API_KEY?.trim() ? "env:GOOGLE_API_KEY" : "gemini:missing-key";
+  }
+  if (config.llm.provider === "openrouter") return openRouterApiKey() ? "env:OPENROUTER_API_KEY" : "openrouter:missing-key";
   if (config.llm.provider === "ollama") return "ollama:none";
   if (process.env.ANTHROPIC_API_KEY) return "env:ANTHROPIC_API_KEY";
   if (process.env.ANTHROPIC_AUTH_TOKEN) return "env:ANTHROPIC_AUTH_TOKEN";

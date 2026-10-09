@@ -2,17 +2,17 @@
 
 Setup before the demo:
 
-1. `DAHL_API_KEY` is set in `.env` (default provider: Dahl; `curl localhost:8787/api/health` shows `"provider":"dahl"` once the server runs). For Claude set `LLM_PROVIDER=anthropic` and make sure `ant auth status` shows an active profile (or `ANTHROPIC_API_KEY` is set).
+1. `DAHL_API_KEY` is set in `.env` (default provider: Dahl; `curl localhost:8787/api/health` shows `"provider":"dahl"` once the server runs). For Claude set `LLM_PROVIDER=anthropic` and make sure `ant auth status` shows an active profile (or `ANTHROPIC_API_KEY` is set). For OpenRouter set `LLM_PROVIDER=openrouter` and `OPENROUTER_API_KEY` (the default model is `anthropic/claude-opus-5.5`).
 2. `npm run dev` from the repository root, open the URL the web process prints (`http://localhost:8787` when the path contains `#`, otherwise the Vite URL).
 3. The **Отладка** button is in the header. Keep the drawer **closed** during the demo — it collects turns and envelopes anyway — and open it (button or Ctrl/⌘+Shift+D, Esc closes) only when showing the TZ §7 evidence: per-turn latency/tokens and the raw A2UI stream.
 4. Fresh session: open the page in a new tab (the session id lives in `sessionStorage`), or click **Новый счёт** in the header between runs — after the confirm it wipes the bill, the model history and the message log on the server, and every tab of the session returns to the empty screen (the debug log keeps only the resulting `deleteSurface` envelopes).
-5. Navigation during the demo: on desktop use the sticky outline above the bill («Участники · Позиции · Редактор позиции · Итог») to jump between sections and the surface chips («Счёт», «Диаграмма 1») to switch surfaces. On a phone-sized window the bottom tabs switch «Чат / Счёт»; a dot marks the tab with updates. Screenshots: `docs/screenshots/`.
+5. Navigation during the demo: on desktop use the sticky outline above the bill («Участники · Позиции · Итог»; the item editor opens as a dialog from **Открыть**, a new item or **Исправить**, and closes after a clean **Сохранить**, Esc or ✕) to jump between sections and the surface chips («Счёт», «Диаграмма 1») to switch surfaces. On a phone-sized window the bottom tabs switch «Чат / Счёт»; a dot marks the tab with updates. Screenshots: `docs/screenshots/`.
 
 Money is entered in lei (major units); the server stores integer bani. All values below are what the UI must show.
 
 ## S1 — bill from text
 
-Click **Пример из ТЗ** in the chat (or paste the text):
+Click **Ужин на четверых — пример** in the chat (or paste the text):
 
 > Были Аня, Боря, Вика, Гена. Еда 1200 — платил Боря, поровну на всех. Кальяны 800 — платила Аня, доли: Аня 2, Боря 1, Вика 1. Вино 600 — платила Аня, суммы: Аня 250, Боря 250, Вика 100. Чаевые 260 — платила Вика, поровну на всех.
 
@@ -57,7 +57,7 @@ Log: turn row with `create 1`, `components ≥ 1`, first-A2UI ms, output tokens 
 
 ## S6 — words on top of the existing UI
 
-Reset (new tab + S1), then click **Гена курил — правка** («Гена тоже курил, одна доля»).
+Reset (new tab + S1), then click **Гена тоже курил** («Гена тоже курил, одна доля»).
 
 | | Должен | Заплатил | Баланс |
 |---|---|---|---|
@@ -70,7 +70,7 @@ Reset (new tab + S1), then click **Гена курил — правка** («Г�
 
 ## S7 — unplanned request
 
-Click **Диаграмма долгов** («Покажи диаграммой, кто сколько потратил»). There is no chart component in the basic catalog; expect the model to build a new surface (`chart-1`, …) from Rows/Cards with `weight` bars or a table. The new surface scrolls into view, flashes once and gets a chip in the switcher; «Свернуть» / «Скрыть» are local. Record what it did without code changes (TZ §7 "Незапланированное").
+Click **Кто сколько потратил** («Покажи диаграммой, кто сколько потратил»). There is no chart component in the basic catalog; expect the model to build a new surface (`chart-1`, …) from Rows/Cards with `weight` bars or a table. The new surface scrolls into view, flashes once and gets a chip in the switcher; «Свернуть» / «Скрыть» are local. Record what it did without code changes (TZ §7 "Незапланированное").
 
 ## S8 — action from the UI back to the agent
 
@@ -80,7 +80,7 @@ Click **Напомнить** next to Вика (if the model put it in the layout
 
 **Фото чека** → `photo_2026-10-04_18-36-09.jpg` from the repository root (METRO receipt, total SUMA 723.67). The agent reads the items, asks who paid if unclear, creates the bill and renders it.
 
-Needs a model with vision: Claude (`LLM_PROVIDER=anthropic`) or an Ollama model with vision. On the default Dahl provider no model reads images, so the button answers with a 422 message ("… не читает изображения") — skip this step or describe the receipt in text.
+Needs a model with vision: Claude (`LLM_PROVIDER=anthropic`), Gemini (`LLM_PROVIDER=gemini`), an OpenRouter model with image input (`LLM_PROVIDER=openrouter`, the default model has it) or an Ollama model with vision. On the default Dahl provider no model reads images, so the button answers with a 422 message ("… не читает изображения") — skip this step or describe the receipt in text.
 
 ## S10 — streaming
 

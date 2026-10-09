@@ -100,14 +100,15 @@ export function Surfaces() {
 
   if (ordered.length === 0) {
     return (
-      <div className="empty-state">
-        <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
-          <path d="M12 6h24v36l-6-4-6 4-6-4-6 4z" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" />
-          <path d="M18 16h12M18 23h12M18 30h7" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
-        </svg>
+      <div className="empty-state paper">
         <h2>Здесь появится счёт</h2>
-        <p>Агент соберёт интерфейс счёта: участники, позиции, деление и итог — всё можно будет править прямо здесь.</p>
-        <p className="empty-state-hint">Начните с сообщения в чате или выберите пример.</p>
+        <p>Участники, позиции и кто кому сколько должен. Всё на этом листе можно будет поправить руками.</p>
+        <div className="empty-state-lines" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
       </div>
     );
   }

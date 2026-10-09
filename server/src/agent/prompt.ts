@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createScope } from "../log.js";
-import { catalogSchema, commonTypesSchema, COMPONENT_NAMES } from "../a2ui/validate.js";
+import { catalogSchema, commonTypesSchema, COMPONENT_NAMES, customComponentsSchema } from "../a2ui/validate.js";
 import { BillStore } from "../domain/store.js";
 import { buildControlExample } from "../domain/fixtures/control-example.js";
 import { projectBill } from "../projector/project.js";
@@ -38,7 +38,7 @@ Money is computed by the server tools, never by you. Amounts the user says are m
 const WORKFLOW = `## Workflow
 1. New bill described in free text → call create_bill with everyone and every item (payer and split per item). Then call render_surface ONCE with surfaceId "bill".
 2. Later changes ("Гена тоже курил, одна доля", "Вино платил Боря") → call the domain tools (update_item, add_person, …). The "bill" surface refreshes automatically: its data model is pushed by the server. Do NOT call render_surface for "bill" again unless the user explicitly asks for a different layout.
-3. A request no screen was built for (a chart, a comparison, a reminder card) → call get_summary if you need numbers, then render_surface with a NEW surfaceId (e.g. "chart-1") and your own "data". Build it from basic-catalog components only.
+3. A request no screen was built for (a chart, a comparison, a reminder card) → call get_summary if you need numbers, then render_surface with a NEW surfaceId (e.g. "chart-1") and your own "data". Build it from the allowed components; for a chart or diagram use BarChart or PieChart (see the chart rules below).
 4. Messages starting with "[UI action]" come from buttons the bill surface does not handle itself (e.g. remind). Act on them: e.g. for remind, call get_summary and write the reminder text with the person's amount and whom to pay.
 5. Messages starting with "[Состояние счёта изменено через интерфейс]" tell you what the user changed through the UI since your last turn; treat it as the current state.
 6. In render_surface write "surfaceId" first, then "components" (root first, parents before children), then "data".`;
@@ -47,17 +47,29 @@ const A2UI_RULES = `## A2UI v0.9 rules (render_surface)
 - You only supply "components" (a flat array) and, for non-bill surfaces, "data". The server wraps them into createSurface / updateComponents / updateDataModel messages; never write envelopes, "version" or "catalogId".
 - Every component: {"id": "...", "component": "<Type>", ...props}. Exactly one has id "root". Put root first and parents before children (the UI streams in this order).
 - Children are referenced by id, never nested inline: "children": ["a", "b"] for a static list, or "children": {"componentId": "row_tpl", "path": "/items"} to repeat a template for each element of a data array. Card and Button take a single "child" id. Tabs: "tabs": [{"title": "...", "child": "id"}].
+- Every component has exactly one parent. A Button's label Text is referenced only by the Button's "child" — never also list it in a Row/Column "children", or the label renders twice (once beside its own button).
 - Data binding: {"path": "/absolute/pointer"}. Inside a template, relative paths ("title", "id") resolve against the current array element. Use literal values for constants.
 - TextField.value and CheckBox.value bind two-way to the data model: typing changes the client data model only; the server sees it when a button action fires (put the bound path in the action context).
 - Buttons: {"component": "Button", "child": "<Text id>", "action": {"event": {"name": "...", "context": {...}}}}; variant "primary" for the main action, "borderless" for links.
 - ChoicePicker.options are static; for people use a template of Buttons over the data array instead.
 - checks = [{"condition": {"call": "required", "args": {"value": {"path": "/x"}}}, "message": "..."}] — never {"call", "args", "message"} directly.
 - There is NO conditional visibility: a List/Column over an empty array renders nothing — the data decides what is shown.
-- There is NO chart component and no arithmetic: numbers and money are preformatted strings in the data — bind them with Text. Do not use formatCurrency/formatNumber on them.
-- "weight" (number) on a direct child of a Row/Column distributes space like flex-grow (useful for bars: a Row with a coloured Card of weight N and an empty Text of weight M).
+- No arithmetic: money is a preformatted string in the data — bind it with Text. Do not use formatCurrency/formatNumber on it.
+- "weight" (number) on a direct child of a Row/Column distributes space like flex-grow.
 - Text "variant": h1–h5, caption, body. Body text is rendered as Markdown, so never start a string with "- ", "* ", "1. " or "#".
-- Allowed components: ${COMPONENT_NAMES.join(", ")}. Nothing else exists.
-- If render_surface returns an error, fix exactly the listed problems and call it again.`;
+- If render_surface returns an error, fix exactly the listed problems and call it again.
+
+## Charts (BarChart, PieChart — this app's own components, schema below)
+- "Диаграмма", "график", "покажи наглядно" → a chart, never TextFields or plain Text rows. TextField is only for input the user edits.
+- BarChart compares amounts (кто сколько заплатил / должен). PieChart shows shares of a whole (доля каждого в общем счёте); "donut": true for a ring.
+- Both take "items": [{"label": "Аня", "value": 1400, "displayText": "1400.00 MDL"}, …] and an optional "title". Charts draw their own labels, values and legend: do not add Text rows repeating them.
+- "value" is a plain non-negative number copied verbatim from get_summary balances (paidValue, owesValue); "displayText" is the matching text (paid, owes) plus the currency. Never compute, sum or round values yourself. Balances can be negative: show them as Text, not as a chart.
+- Leave out "color": the renderer assigns a colour-blind-safe palette by position.
+- A chart surface: root Column → Card (h3 title Text + the chart). One chart per request unless the user asks for more.
+- Example: [{"id":"root","component":"Column","children":["card"]},{"id":"card","component":"Card","child":"body"},{"id":"body","component":"Column","children":["title","chart"]},{"id":"title","component":"Text","text":"Кто сколько заплатил","variant":"h3"},{"id":"chart","component":"BarChart","items":[{"label":"Аня","value":1400,"displayText":"1400.00 MDL"},{"label":"Боря","value":1200,"displayText":"1200.00 MDL"}]}]
+
+## Allowed components
+${COMPONENT_NAMES.join(", ")}. Nothing else exists.`;
 
 // How the bill should look. The web client builds its section navigation from Card titles and
 // wraps Rows on phones, so these rules are about structure, not pixels.
@@ -79,6 +91,8 @@ function schemaBlock(): string {
     "---BEGIN A2UI JSON SCHEMA---",
     "### Catalog Schema:",
     JSON.stringify(catalogSchema),
+    "### Chart Components Schema (this app's own additions, same rules as the catalog):",
+    JSON.stringify(customComponentsSchema),
     "### Common Types Schema:",
     JSON.stringify(commonTypesSchema),
     "---END A2UI JSON SCHEMA---",
@@ -124,7 +138,7 @@ function actionsBlock(): string {
     "- title with /bill/title and the total /bill/totalText + /bill/currency;",
     "- participants: a template over /people with a TextField (value {\"path\": \"name\"}) + rename and remove buttons; a TextField on /draft/personName + add button;",
     "- items: a template over /items showing title, priceText, payerName, splitText, isSelectedText, with select and remove buttons; TextFields on /draft/itemTitle and /draft/itemPrice + add button;",
-    "- the editor card for /editor: TextFields on /editor/title and /editor/priceText; splitTypeText; three set_split_type buttons (Поровну / Суммы / Доли); a template over /editor/payerOptions (Button per person showing markText + name, action set_payer); the three row templates — /editor/equalRows (CheckBox label {\"path\": \"name\"} value {\"path\": \"included\"} + shareText), /editor/exactRows (TextField on amountText), /editor/sharesRows (TextField on weightText + shareText); Text on /editor/remainingText and /editor/error; a save_item button;",
+    "- the editor card for /editor: TextFields on /editor/title and /editor/priceText; splitTypeText; three set_split_type buttons (Поровну / Суммы / Доли); a template over /editor/payerOptions (Button per person, action set_payer; the Button's child is a Row of two Texts, {\"path\": \"markText\"} and {\"path\": \"name\"}, so every button shows the person's name); the three row templates — /editor/equalRows (CheckBox label {\"path\": \"name\"} value {\"path\": \"included\"} + shareText), /editor/exactRows (TextField on amountText), /editor/sharesRows (TextField on weightText + shareText); Text on /editor/remainingText and /editor/error; a save_item button;",
     "- the summary card: a template over /summary/rows (name, owesText, paidText, balanceText; optionally a «Напомнить» button with action remind {\"personId\": {\"path\": \"personId\"}}) and a template over /summary/transfers (text);",
     "- the error area: Text on /errors/general/message; Text on /errors/removePerson/message and a template over /errors/removePerson/items with a fix_item button per blocking item.",
   ].join("\n");

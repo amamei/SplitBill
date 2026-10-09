@@ -18,8 +18,12 @@ const readSpec = (name: string) => JSON.parse(fs.readFileSync(path.join(specDir,
 export const commonTypesSchema = readSpec("common_types.json");
 export const catalogSchema = readSpec("catalog.json");
 const serverToClientSchema = readSpec("server_to_client.json");
+// Project-owned chart components; lives outside spec/ so the vendored files stay verbatim.
+export const customComponentsSchema = JSON.parse(fs.readFileSync(path.join(specDir, "..", "..", "custom_components.json"), "utf8"));
 
-export const COMPONENT_NAMES: string[] = Object.keys(catalogSchema.components);
+const BASIC_NAMES: string[] = Object.keys(catalogSchema.components);
+const CUSTOM_NAMES: string[] = Object.keys(customComponentsSchema.components);
+export const COMPONENT_NAMES: string[] = [...BASIC_NAMES, ...CUSTOM_NAMES];
 const MAX_ERRORS = 12;
 
 export type ValidationError = { path: string; message: string };
@@ -36,10 +40,12 @@ ajv.addSchema(catalogSchema);
 // server_to_client.json references a relative "catalog.json"; upstream run_tests.py aliases it the same way.
 ajv.addSchema({ ...catalogSchema, $id: "https://a2ui.org/specification/v0_9/catalog.json" });
 ajv.addSchema(serverToClientSchema);
+ajv.addSchema(customComponentsSchema);
 
-const componentValidators = new Map<string, ValidateFunction>(
-  COMPONENT_NAMES.map((name) => [name, ajv.getSchema(`${catalogSchema.$id}#/components/${name}`)!]),
-);
+const componentValidators = new Map<string, ValidateFunction>([
+  ...BASIC_NAMES.map((name) => [name, ajv.getSchema(`${catalogSchema.$id}#/components/${name}`)!] as const),
+  ...CUSTOM_NAMES.map((name) => [name, ajv.getSchema(`${customComponentsSchema.$id}#/components/${name}`)!] as const),
+]);
 const messageValidators: Record<string, ValidateFunction> = {
   createSurface: ajv.getSchema(`${serverToClientSchema.$id}#/$defs/CreateSurfaceMessage`)!,
   updateComponents: ajv.getSchema(`${serverToClientSchema.$id}#/$defs/UpdateComponentsMessage`)!,
@@ -152,6 +158,24 @@ export function validateComponents(
     }
   }
 
+  // One parent per component: a Text that is both a Button's child and a Row's child renders
+  // twice (the label shows up beside its own button).
+  if (checkReferences) {
+    const parents = new Map<string, string[]>();
+    for (const [id, c] of byId) {
+      for (const { ref } of childRefs(c)) if (byId.has(ref)) parents.set(ref, [...(parents.get(ref) ?? []), id]);
+    }
+    for (const [ref, from] of parents) {
+      if (from.length < 2) continue;
+      errors.push({
+        path: `${prefix} (id "${ref}")`,
+        message: `component "${ref}" is placed by ${from.map((p) => `"${p}"`).join(" and ")}, so it renders ${from.length} times; a component has one parent — keep it under one of them (a Button's label Text belongs only to the Button's "child")`,
+      });
+    }
+  }
+
+  if (checkReferences && surfaceId === "bill") errors.push(...billContractErrors(byId, prefix));
+
   if (errors.length > 0) {
     const condensed = errors.slice(0, MAX_ERRORS);
     if (errors.length > MAX_ERRORS) condensed.push({ path: prefix, message: `…and ${errors.length - MAX_ERRORS} more errors` });
@@ -160,6 +184,42 @@ export function validateComponents(
   }
   logger.debug("ok", { surfaceId, components: components.length });
   return { ok: true };
+}
+
+/**
+ * Bill-specific checks the schema cannot express: the payer picker must show who each button
+ * is for. A template over /editor/payerOptions bound only to markText renders a row of blank
+ * buttons with a single «●».
+ */
+function billContractErrors(byId: Map<string, Record<string, unknown>>, prefix: string): ValidationError[] {
+  const errors: ValidationError[] = [];
+  for (const [id, c] of byId) {
+    const children = c.children;
+    if (!isObject(children) || children.path !== "/editor/payerOptions" || typeof children.componentId !== "string") continue;
+    if (!subtree(byId, children.componentId).some((t) => t.component === "Text" && isObject(t.text) && t.text.path === "name")) {
+      errors.push({
+        path: `${prefix} (id "${id}")/children`,
+        message: 'the /editor/payerOptions template must show each person\'s name: make the Button\'s child a Row of two Texts, {"path": "markText"} and {"path": "name"}',
+      });
+    }
+  }
+  return errors;
+}
+
+/** A component and everything under it (cycle-safe). */
+function subtree(byId: Map<string, Record<string, unknown>>, rootId: string): Array<Record<string, unknown>> {
+  const seen = new Set<string>();
+  const out: Array<Record<string, unknown>> = [];
+  const stack = [rootId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    const c = byId.get(id);
+    if (!c || seen.has(id)) continue;
+    seen.add(id);
+    out.push(c);
+    for (const { ref } of childRefs(c)) stack.push(ref);
+  }
+  return out;
 }
 
 /** Every component id a component points to, with the property it came from. */
